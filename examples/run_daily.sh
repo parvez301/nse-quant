@@ -89,6 +89,14 @@ if [ -n "$latestDecisionFile" ]; then
 fi
 
 # ---------------------------------------------------------------------------
+# Step 3.6: shadow execution — re-price today's paper fills against the real
+# Kite order book and write outputs/shadow_trade_log.csv. Read-only; never
+# places an order. Skips silently if Kite isn't configured (Tier 1).
+# ---------------------------------------------------------------------------
+echo "[$TS] shadow execution against Kite order book..." | tee -a "$LOG"
+"$PYTHON" examples/nse_shadow_execute.py --skip-if-missing 2>&1 | tee -a "$LOG" | grep -E "^\[shadow\]" || true
+
+# ---------------------------------------------------------------------------
 # Step 4: mark paper portfolio
 # ---------------------------------------------------------------------------
 if [ -f outputs/current_portfolio.csv ]; then
