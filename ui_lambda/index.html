@@ -150,7 +150,19 @@ let state = {
   attribution: null,       // {symbol, score, bias, top_contributors:[…]}
   attributionLoading: false,
   attributionError: null,
+  // Compare mode state — overlay 2-5 tickers normalised to %-from-first-bar.
+  // Reuses the same /api/analytics/timeseries endpoint per symbol.
+  compareMode: false,
+  compareSymbols: [],          // ordered, max 5
+  compareSeries: {},           // {sym: [{date, close}, ...]}
+  compareLoading: {},          // {sym: true|false}
+  compareInput: "",
 };
+
+const COMPARE_MAX = 5;
+const COMPARE_PALETTE = [
+  "#60a5fa", "#f59e0b", "#34d399", "#f472b6", "#a78bfa",
+];
 
 function setTab(t) {
   state.tab = t;
@@ -730,9 +742,122 @@ function draw() {
   render(pageView(), document.getElementById("app"));
   // Plotly redraws have to happen after the DOM is in place
   if (state.tab === "explorer") {
-    drawExplorerChart();
-    drawAttributionChart();
+    if (state.compareMode) {
+      drawCompareChart();
+    } else {
+      drawExplorerChart();
+      drawAttributionChart();
+    }
   }
+}
+
+// ---------------------------------------------------------------------------
+// Compare mode — overlay 2-5 tickers, normalised to %-from-first-bar
+// ---------------------------------------------------------------------------
+
+function toggleCompareMode() {
+  state.compareMode = !state.compareMode;
+  if (state.compareMode && state.selectedSymbol &&
+      !state.compareSymbols.includes(state.selectedSymbol)) {
+    // Seed with the symbol the user was already looking at
+    addCompareSymbol(state.selectedSymbol);
+  } else {
+    draw();
+  }
+}
+
+function addCompareSymbol(sym) {
+  if (!sym) return;
+  sym = sym.toUpperCase().trim();
+  if (state.compareSymbols.includes(sym)) return;
+  if (state.compareSymbols.length >= COMPARE_MAX) return;
+  if (state.symbols && !state.symbols.some(s => s.symbol === sym)) return;
+  state.compareSymbols = [...state.compareSymbols, sym];
+  state.compareInput = "";
+  loadCompareSeries(sym);
+  draw();
+}
+
+function removeCompareSymbol(sym) {
+  state.compareSymbols = state.compareSymbols.filter(s => s !== sym);
+  delete state.compareSeries[sym];
+  delete state.compareLoading[sym];
+  draw();
+}
+
+async function loadCompareSeries(sym) {
+  if (state.compareSeries[sym] || state.compareLoading[sym]) return;
+  state.compareLoading = { ...state.compareLoading, [sym]: true };
+  draw();
+  try {
+    const meta = state.symbols?.find(s => s.symbol === sym);
+    const [start, end] = rangeToDates(state.selectedRange, meta?.last_date);
+    const qs = new URLSearchParams({ symbol: sym });
+    if (start) qs.set("start", start);
+    if (end) qs.set("end", end);
+    const series = await api(`/api/analytics/timeseries?${qs}`);
+    state.compareSeries = { ...state.compareSeries, [sym]: series.rows || [] };
+  } catch (e) {
+    state.compareSeries = { ...state.compareSeries, [sym]: [] };
+    console.warn(`compare load failed for ${sym}: ${e.message}`);
+  } finally {
+    state.compareLoading = { ...state.compareLoading, [sym]: false };
+    draw();
+  }
+}
+
+function reloadCompareForRange() {
+  // Force re-fetch on range change so each series spans the same window
+  state.compareSeries = {};
+  state.compareLoading = {};
+  state.compareSymbols.forEach(loadCompareSeries);
+}
+
+function drawCompareChart() {
+  if (!window.Plotly) return;
+  const el = document.getElementById("explorer-chart");
+  if (!el) return;
+  if (state.compareSymbols.length === 0) {
+    el.innerHTML = '<div style="color:var(--muted);text-align:center;padding:60px 0;">Add up to 5 tickers above to overlay them, all rebased to 0% on the first visible bar.</div>';
+    return;
+  }
+  const traces = state.compareSymbols.map((sym, idx) => {
+    const rows = state.compareSeries[sym];
+    if (!rows || rows.length === 0) return null;
+    const base = Number(rows[0].close);
+    if (!base || !isFinite(base)) return null;
+    return {
+      type: "scatter", mode: "lines", name: sym,
+      x: rows.map(r => r.date),
+      y: rows.map(r => (Number(r.close) / base - 1) * 100),
+      line: { color: COMPARE_PALETTE[idx % COMPARE_PALETTE.length], width: 1.6 },
+      hovertemplate: `<b>${sym}</b> %{x}<br>%{y:.2f}%<extra></extra>`,
+    };
+  }).filter(Boolean);
+
+  if (traces.length === 0) {
+    el.innerHTML = '<div style="color:var(--muted);text-align:center;padding:60px 0;">Loading series…</div>';
+    return;
+  }
+
+  Plotly.react(el, traces, {
+    paper_bgcolor: "transparent",
+    plot_bgcolor: "transparent",
+    font: { family: "system-ui, sans-serif", size: 11, color: "#e2e8f0" },
+    margin: { l: 50, r: 20, t: 24, b: 40 },
+    height: 460,
+    hovermode: "x unified",
+    showlegend: true,
+    legend: { orientation: "h", y: 1.08, x: 0, font: { size: 11 } },
+    xaxis: { gridcolor: "rgba(255,255,255,0.05)" },
+    yaxis: {
+      title: "% from first bar",
+      tickformat: ".1f",
+      ticksuffix: "%",
+      gridcolor: "rgba(255,255,255,0.05)",
+      zerolinecolor: "rgba(255,255,255,0.2)",
+    },
+  }, { displaylogo: false, responsive: true });
 }
 
 // ---------------------------------------------------------------------------
@@ -823,7 +948,11 @@ function selectSymbol(sym) {
 
 function selectRange(r) {
   state.selectedRange = r;
-  loadSeries();
+  if (state.compareMode) {
+    reloadCompareForRange();
+  } else {
+    loadSeries();
+  }
 }
 
 function decisionDotsForSymbol(symbol) {
@@ -997,20 +1126,63 @@ function explorerView() {
   const pos = sym ? positionForSymbol(sym) : null;
   const dots = sym ? decisionDotsForSymbol(sym) : { buys: [], sells: [] };
 
+  const inputField = state.compareMode
+    ? html`
+        <input list="symbol-list" value=${state.compareInput}
+               @keydown=${(e) => {
+                 if (e.key === "Enter" && e.target.value.trim()) {
+                   addCompareSymbol(e.target.value);
+                   e.target.value = "";
+                 }
+               }}
+               @change=${(e) => {
+                 if (e.target.value.trim()) {
+                   addCompareSymbol(e.target.value);
+                   e.target.value = "";
+                 }
+               }}
+               placeholder=${state.compareSymbols.length >= COMPARE_MAX
+                 ? `${COMPARE_MAX} max — remove one to add another`
+                 : "Add a ticker, press Enter"}
+               ?disabled=${state.compareSymbols.length >= COMPARE_MAX}
+               style="background:var(--panel-2);color:var(--text);border:1px solid var(--border);padding:6px 10px;border-radius:6px;font-family:inherit;min-width:200px;" />`
+    : html`
+        <input list="symbol-list" value=${sym || ""}
+               @change=${(e) => selectSymbol(e.target.value.toUpperCase().trim())}
+               placeholder="Type a ticker e.g. INFY"
+               style="background:var(--panel-2);color:var(--text);border:1px solid var(--border);padding:6px 10px;border-radius:6px;font-family:inherit;min-width:160px;" />`;
+
+  const compareChips = state.compareMode
+    ? html`
+        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;">
+          ${state.compareSymbols.map((s, idx) => html`
+            <span style="display:inline-flex;align-items:center;gap:6px;padding:3px 10px;border-radius:999px;background:rgba(255,255,255,0.08);border-left:3px solid ${COMPARE_PALETTE[idx % COMPARE_PALETTE.length]};font-size:12px;">
+              ${s}
+              ${state.compareLoading[s] ? html`<span style="color:var(--muted);font-size:10px;">…</span>` : null}
+              <button @click=${() => removeCompareSymbol(s)}
+                      style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:14px;padding:0 0 0 2px;line-height:1;"
+                      title="Remove ${s}">×</button>
+            </span>
+          `)}
+        </div>`
+    : null;
+
   return html`
     <main>
       <div class="card">
         <h2>Symbol Explorer</h2>
         <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;">
-          <label style="font-size:12px;color:var(--muted);">Symbol</label>
-          <input list="symbol-list" value=${sym || ""}
-                 @change=${(e) => selectSymbol(e.target.value.toUpperCase().trim())}
-                 placeholder="Type a ticker e.g. INFY"
-                 style="background:var(--panel-2);color:var(--text);border:1px solid var(--border);padding:6px 10px;border-radius:6px;font-family:inherit;min-width:160px;" />
+          <label style="font-size:12px;color:var(--muted);">${state.compareMode ? "Compare" : "Symbol"}</label>
+          ${inputField}
           <datalist id="symbol-list">
             ${(state.symbols || []).map(s => html`<option value=${s.symbol}></option>`)}
           </datalist>
-          <span style="color:var(--muted);font-size:12px;">${(state.symbols || []).length} symbols available</span>
+          ${state.compareMode
+            ? html`<span style="color:var(--muted);font-size:12px;">${state.compareSymbols.length}/${COMPARE_MAX} selected</span>`
+            : html`<span style="color:var(--muted);font-size:12px;">${(state.symbols || []).length} symbols available</span>`}
+          <button class="tab ${state.compareMode ? "active" : ""}"
+                  style="padding:4px 10px;font-size:12px;"
+                  @click=${toggleCompareMode}>Compare</button>
           <span style="margin-left:auto;display:flex;gap:6px;">
             ${Object.keys(RANGE_PRESETS).map(r => html`
               <button class="tab ${state.selectedRange === r ? "active" : ""}"
@@ -1019,6 +1191,7 @@ function explorerView() {
             `)}
           </span>
         </div>
+        ${compareChips}
         ${meta ? html`
           <div style="margin-top:10px;font-size:12px;color:var(--muted);">
             ${sym} — ${meta.n_bars.toLocaleString()} bars from ${meta.first_date} to ${meta.last_date}
