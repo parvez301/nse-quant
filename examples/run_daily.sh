@@ -136,6 +136,16 @@ echo "[$TS] exporting today's features + booster..." | tee -a "$LOG"
 "$PYTHON" examples/nse_export_features_today.py 2>&1 | tee -a "$LOG" | grep -E "^\[features\]" || true
 
 # ---------------------------------------------------------------------------
+# Step 8.6: Live IC snapshot — score vs Kite-quoted return-since-decision
+# (Tier 3). Cheap enough to run daily; signal is most useful when invoked
+# AFTER market close (15:30 IST) since the cron's 08:00 IST timing means
+# Kite last_price still equals previous close. Consider a second cron at
+# 16:00 IST that just calls this script.
+# ---------------------------------------------------------------------------
+echo "[$TS] live IC snapshot..." | tee -a "$LOG"
+"$PYTHON" examples/nse_live_ic.py --skip-if-missing 2>&1 | tee -a "$LOG" | grep -E "^\[live-ic\]" || true
+
+# ---------------------------------------------------------------------------
 # Step 8.5: Kite margin + holdings reconciliation (Tier 2). Read-only;
 # writes outputs/kite_reconcile.json. Non-blocking — flags
 # exceeds_margin or kite-only/paper-only holdings for awareness only.
