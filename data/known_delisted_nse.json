@@ -1,0 +1,101 @@
+{
+  "_meta": {
+    "purpose": "Curated list of NSE-listed names that traded during 2008-2024 but were delisted, restructured, or otherwise zeroed out — and which yfinance silently drops from the historical universe. Used by examples/nse_survivorship_estimate.py to compute a more honest survivorship penalty than the visible-exits-only baseline.",
+    "warning": "This list is INCOMPLETE and CONSERVATIVE on purpose. It captures only well-documented public collapses. The true universe of NSE delistings/insolvencies between 2008-2024 is several hundred names. For a more rigorous correction, subscribe to a paid data feed (EOD Historical Data ~$30/mo or Trendlyne) and use the --eod-historical mode in nse_universe_pit.py instead.",
+    "format": {
+      "ticker": "NSE trading symbol at time of last activity",
+      "first_active_year": "approximate year the name was actively traded (lower bound)",
+      "last_active_year": "year the name was effectively delisted/zeroed",
+      "exit_event": "what happened",
+      "approx_total_return_pct": "rough peak-to-delisting return for someone holding from first_active_year to last_active_year. Negative; conservative estimates."
+    },
+    "schema_version": 1,
+    "last_reviewed": "2026-04-27"
+  },
+  "delisted": [
+    {
+      "ticker": "DHFL",
+      "first_active_year": 2008,
+      "last_active_year": 2021,
+      "exit_event": "NCLT bankruptcy resolution; equity wiped after Piramal acquisition",
+      "approx_total_return_pct": -95
+    },
+    {
+      "ticker": "RCOM",
+      "first_active_year": 2008,
+      "last_active_year": 2019,
+      "exit_event": "NCLT insolvency proceedings; equity zeroed",
+      "approx_total_return_pct": -98
+    },
+    {
+      "ticker": "RCAP",
+      "first_active_year": 2008,
+      "last_active_year": 2022,
+      "exit_event": "NCLT resolution; majority equity dilution",
+      "approx_total_return_pct": -95
+    },
+    {
+      "ticker": "JETAIRWAYS",
+      "first_active_year": 2008,
+      "last_active_year": 2019,
+      "exit_event": "Bankruptcy; trading suspended",
+      "approx_total_return_pct": -90
+    },
+    {
+      "ticker": "PUNJLLOYD",
+      "first_active_year": 2008,
+      "last_active_year": 2019,
+      "exit_event": "NCLT insolvency",
+      "approx_total_return_pct": -95
+    },
+    {
+      "ticker": "BHUSHANSTL",
+      "first_active_year": 2008,
+      "last_active_year": 2018,
+      "exit_event": "NCLT; acquired by Tata Steel via resolution plan",
+      "approx_total_return_pct": -90
+    },
+    {
+      "ticker": "LANCOIN",
+      "first_active_year": 2008,
+      "last_active_year": 2017,
+      "exit_event": "NCLT insolvency proceedings",
+      "approx_total_return_pct": -95
+    },
+    {
+      "ticker": "ESSARSTEEL",
+      "first_active_year": 2008,
+      "last_active_year": 2018,
+      "exit_event": "NCLT; acquired by ArcelorMittal",
+      "approx_total_return_pct": -85
+    },
+    {
+      "ticker": "COFFEEDAY",
+      "first_active_year": 2015,
+      "last_active_year": 2020,
+      "exit_event": "Promoter death + debt crisis; severe equity loss",
+      "approx_total_return_pct": -90
+    },
+    {
+      "ticker": "EDUCOMP",
+      "first_active_year": 2008,
+      "last_active_year": 2017,
+      "exit_event": "NCLT insolvency",
+      "approx_total_return_pct": -98
+    },
+    {
+      "ticker": "ABGSHIP",
+      "first_active_year": 2008,
+      "last_active_year": 2017,
+      "exit_event": "NCLT insolvency",
+      "approx_total_return_pct": -95
+    },
+    {
+      "ticker": "FRETAIL",
+      "first_active_year": 2010,
+      "last_active_year": 2022,
+      "exit_event": "Future Group debt crisis; failed Reliance acquisition",
+      "approx_total_return_pct": -90
+    }
+  ]
+}

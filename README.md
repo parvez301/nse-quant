@@ -209,8 +209,23 @@ needs another commit and another author to take responsibility for it.
 ## Known gaps
 
 - **Partial point-in-time fix.** `nse_universe_pit.py` filters by listing date,
-  but yfinance silently drops fully-delisted tickers. A true survivorship fix
-  needs paid data (~$30/mo from EOD Historical Data, or ~₹15K/yr from Trendlyne).
+  but yfinance silently drops fully-delisted tickers. There are three
+  successively-better corrections, each documented in
+  `examples/nse_survivorship_estimate.py`:
+
+  1. **Visible exits** (default, free) — counts names that stopped reporting
+     bars during the window. Strict lower bound on the bias.
+  2. **Named delistings** (`--include-known-delisted`, free) — layers in a
+     curated list at `data/known_delisted_nse.json` of well-documented NSE
+     collapses 2008-2024 (DHFL, RCOM, RCAP, JET, PUNJLLOYD, BHUSHANSTL,
+     LANCOIN, ESSARSTEEL, COFFEEDAY, EDUCOMP, ABGSHIP, FRETAIL — 12 names
+     today, expand by editing the JSON). Adds another ~40 bps/year drag.
+  3. **Full PIT correction** (paid) — subscribe to EOD Historical Data
+     (~$30/mo, NSE+BSE pack) or Trendlyne (~₹15K/yr). Set
+     `EOD_HISTORICAL_API_KEY` in `.envrc.local`, then wire the real API
+     call into `examples/nse_pit_external_data.py::EODHistoricalDataAdapter._fetch_delisted`
+     (the docstring shows the exact URL + payload shape). The corrected
+     parquet slots into the rest of the pipeline transparently.
 - **No NSE-specific corporate-action handling** beyond what yfinance already
   applies. Splits and bonuses are handled; rights issues and demergers may
   introduce noise.
