@@ -756,10 +756,15 @@ function draw() {
 // ---------------------------------------------------------------------------
 
 function toggleCompareMode() {
+  // Tear down any existing Plotly chart so the next render starts clean —
+  // the OHLC chart and the compare chart share the same #explorer-chart div
+  // and Plotly's internal state survives lit-html re-renders.
+  const el = document.getElementById("explorer-chart");
+  if (el && window.Plotly) Plotly.purge(el);
+
   state.compareMode = !state.compareMode;
   if (state.compareMode && state.selectedSymbol &&
       !state.compareSymbols.includes(state.selectedSymbol)) {
-    // Seed with the symbol the user was already looking at
     addCompareSymbol(state.selectedSymbol);
   } else {
     draw();
@@ -786,7 +791,12 @@ function removeCompareSymbol(sym) {
 }
 
 async function loadCompareSeries(sym) {
-  if (state.compareSeries[sym] || state.compareLoading[sym]) return;
+  // Treat ANY existing entry (including empty []) as "already loaded" only if
+  // we actually have rows; otherwise allow retry. Empty array = previous
+  // failure or empty response, both are retry-eligible.
+  if (state.compareLoading[sym]) return;
+  const cached = state.compareSeries[sym];
+  if (Array.isArray(cached) && cached.length > 0) return;
   state.compareLoading = { ...state.compareLoading, [sym]: true };
   draw();
   try {
@@ -814,13 +824,20 @@ function reloadCompareForRange() {
 }
 
 function drawCompareChart() {
-  if (!window.Plotly) return;
   const el = document.getElementById("explorer-chart");
-  if (!el) return;
+  if (!el || typeof Plotly === "undefined") return;
+
+  const placeholder = (msg) => {
+    Plotly.purge(el);
+    el.innerHTML = `<div style="color:var(--muted);text-align:center;padding:60px 0;">${msg}</div>`;
+  };
+
   if (state.compareSymbols.length === 0) {
-    el.innerHTML = '<div style="color:var(--muted);text-align:center;padding:60px 0;">Add up to 5 tickers above to overlay them, all rebased to 0% on the first visible bar.</div>';
+    placeholder("Add up to 5 tickers above to overlay them, all rebased to 0% on the first visible bar.");
     return;
   }
+
+  const stillLoading = state.compareSymbols.some(s => state.compareLoading[s]);
   const traces = state.compareSymbols.map((sym, idx) => {
     const rows = state.compareSeries[sym];
     if (!rows || rows.length === 0) return null;
@@ -836,11 +853,14 @@ function drawCompareChart() {
   }).filter(Boolean);
 
   if (traces.length === 0) {
-    el.innerHTML = '<div style="color:var(--muted);text-align:center;padding:60px 0;">Loading series…</div>';
+    placeholder(stillLoading ? "Loading series…" : "No data returned for the selected tickers in this range.");
     return;
   }
 
-  Plotly.react(el, traces, {
+  // Plotly's internal element state may be stale after innerHTML mutations,
+  // so always purge before plotting fresh traces.
+  Plotly.purge(el);
+  Plotly.newPlot(el, traces, {
     paper_bgcolor: "transparent",
     plot_bgcolor: "transparent",
     font: { family: "system-ui, sans-serif", size: 11, color: "#e2e8f0" },
