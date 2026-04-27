@@ -34,9 +34,15 @@ COPY examples /app/examples
 COPY outputs/nse_baseline_750_long /app/model_seed/nse_baseline_750_long
 COPY outputs/pit_universe.parquet /app/model_seed/pit_universe.parquet
 COPY docker/run_daily_cloud.sh /app/run_daily_cloud.sh
-RUN chmod +x /app/run_daily_cloud.sh /app/examples/run_daily.sh
+COPY docker/run_postclose_cloud.sh /app/run_postclose_cloud.sh
+RUN chmod +x /app/run_daily_cloud.sh /app/run_postclose_cloud.sh \
+        /app/examples/run_daily.sh /app/examples/run_postclose.sh
 
 ENV MODEL_DIR=outputs/nse_baseline_750_long \
     PYTHONPATH=/app
 
-ENTRYPOINT ["/app/run_daily_cloud.sh"]
+# Default: morning cron entry. The 16:00 IST CloudWatch rule overrides this
+# via ECS containerOverrides.command to point at run_postclose_cloud.sh.
+# Using CMD (not ENTRYPOINT) so override REPLACES the command instead of
+# being appended as args.
+CMD ["/app/run_daily_cloud.sh"]

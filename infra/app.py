@@ -18,14 +18,21 @@ if not notificationEmail:
     )
 
 # Custom domain config — optional. If you want CloudFront + cert + Route53 alias,
-# pass all three via `-c`:
+# supply all three via either CDK context or environment variables:
+#
 #   cdk deploy -c custom_domain=trade.example.com \
 #              -c hosted_zone_id=Z0123456789ABCDEFGHIJ \
 #              -c hosted_zone_name=example.com
-# Skip them entirely to deploy with just the raw Lambda Function URL.
-customDomain = app.node.try_get_context("custom_domain")
-hostedZoneId = app.node.try_get_context("hosted_zone_id")
-hostedZoneName = app.node.try_get_context("hosted_zone_name")
+#
+#   # or in .envrc.local (gitignored):
+#   export CUSTOM_DOMAIN=trade.example.com
+#   export HOSTED_ZONE_ID=Z0123456789ABCDEFGHIJ
+#   export HOSTED_ZONE_NAME=example.com
+#
+# Leave them all unset to deploy with just the raw Lambda Function URL.
+customDomain = app.node.try_get_context("custom_domain") or os.environ.get("CUSTOM_DOMAIN")
+hostedZoneId = app.node.try_get_context("hosted_zone_id") or os.environ.get("HOSTED_ZONE_ID")
+hostedZoneName = app.node.try_get_context("hosted_zone_name") or os.environ.get("HOSTED_ZONE_NAME")
 
 awsAccount = os.environ.get("CDK_DEFAULT_ACCOUNT")
 primaryRegion = os.environ.get("CDK_DEFAULT_REGION", "ap-south-1")

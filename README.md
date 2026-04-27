@@ -109,8 +109,14 @@ To put this on a daily cron (Mon–Fri, 08:00 IST, before NSE opens at 09:15):
 
 ```bash
 crontab -e
-# Add:
+# Pre-market: refresh, decide, paper-trade, mark
 0 8 * * 1-5 cd <path-to-repo> && ./examples/run_daily.sh
+
+# Post-market: capture intraday IC + token re-probe.
+# Required for Tier 3 (live IC) to produce a meaningful reading — at
+# 08:00 IST the market is closed, so Kite's last_price equals previous
+# close and the IC is trivially zero.
+0 16 * * 1-5 cd <path-to-repo> && ./examples/run_postclose.sh
 ```
 
 ---

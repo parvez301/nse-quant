@@ -145,6 +145,8 @@ class NseQuantStack(Stack):
         )
 
         # 02:30 UTC Mon-Fri = 08:00 IST Mon-Fri
+        # Default container CMD = /app/run_daily_cloud.sh (set in Dockerfile),
+        # so we don't need a containerOverrides command here.
         scheduleRule = events.Rule(
             self,
             "DailyCron",
@@ -156,6 +158,30 @@ class NseQuantStack(Stack):
                 task_definition=taskDefinition,
                 assign_public_ip=True,
                 subnet_selection=ec2.SubnetSelection(subnet_type=ec2.SubnetType.PUBLIC),
+            )
+        )
+
+        # 10:30 UTC Mon-Fri = 16:00 IST Mon-Fri — post-NSE-close run that
+        # fires Tier 3 (live IC) + Tier 4 (token re-probe) when Kite quotes
+        # actually reflect intraday movement. Reuses the same task definition
+        # and image; container_overrides points it at the post-close entry.
+        postCloseRule = events.Rule(
+            self,
+            "PostCloseCron",
+            schedule=events.Schedule.cron(minute="30", hour="10", week_day="MON-FRI"),
+        )
+        postCloseRule.add_target(
+            events_targets.EcsTask(
+                cluster=cluster,
+                task_definition=taskDefinition,
+                assign_public_ip=True,
+                subnet_selection=ec2.SubnetSelection(subnet_type=ec2.SubnetType.PUBLIC),
+                container_overrides=[
+                    events_targets.ContainerOverride(
+                        container_name="Daily",
+                        command=["/app/run_postclose_cloud.sh"],
+                    )
+                ],
             )
         )
 

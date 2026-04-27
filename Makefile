@@ -41,7 +41,7 @@ synth: ## Synthesize CloudFormation template
 
 .PHONY: deploy
 deploy: ## Build image, push, deploy stack
-	cd infra && PATH="$$PWD/.venv/bin:$$PATH" $(CDK) deploy --require-approval never \
+	cd infra && PATH="$$PWD/.venv/bin:$$PATH" $(CDK) deploy --all --require-approval never \
 		-c notification_email=$(NOTIFICATION_EMAIL)
 
 .PHONY: diff
