@@ -369,6 +369,53 @@ class NseQuantStack(Stack):
             CfnOutput(self, "CustomDomainUrl", value=f"https://{custom_domain}/")
 
         # ------------------------------------------------------------------
+        # Kite token monitor — pages operator before 08:00 IST cron if the
+        # daily access token has expired or will expire within 90 minutes.
+        # Kite tokens cannot be programmatically refreshed (Zerodha mandates
+        # fresh OAuth + 2FA daily), so the best we can do is alert early.
+        # ------------------------------------------------------------------
+        tokenMonitorLogGroup = logs.LogGroup(
+            self,
+            "KiteTokenMonitorLogs",
+            retention=logs.RetentionDays.ONE_MONTH,
+            removal_policy=RemovalPolicy.DESTROY,
+        )
+        kiteLoginUrl = (
+            f"https://{custom_domain}/kite-login"
+            if custom_domain
+            else f"{uiUrl.url}kite-login"
+        )
+        tokenMonitorLambda = lambda_.Function(
+            self,
+            "KiteTokenMonitor",
+            runtime=lambda_.Runtime.PYTHON_3_11,
+            architecture=lambda_.Architecture.ARM_64,
+            handler="handler.handler",
+            code=lambda_.Code.from_asset(str(REPO_ROOT / "kite_token_monitor_lambda")),
+            memory_size=128,
+            timeout=Duration.seconds(15),
+            environment={
+                "KITE_SECRET_NAME": kiteSecret.secret_name,
+                "SNS_TOPIC_ARN": notifyTopic.topic_arn,
+                "KITE_LOGIN_URL": kiteLoginUrl,
+                "WARN_MINUTES": "90",
+            },
+            log_group=tokenMonitorLogGroup,
+        )
+        kiteSecret.grant_read(tokenMonitorLambda)
+        notifyTopic.grant_publish(tokenMonitorLambda)
+
+        # 01:00 UTC Mon-Fri = 06:30 IST Mon-Fri. Token expires at 06:00 IST,
+        # so this fires 30 min after expiry — gives operator 90 min runway
+        # before the 08:00 IST decision cron needs the token.
+        events.Rule(
+            self,
+            "KiteTokenMonitorSchedule",
+            schedule=events.Schedule.cron(minute="0", hour="1", week_day="MON-FRI"),
+            targets=[events_targets.LambdaFunction(tokenMonitorLambda)],
+        )
+
+        # ------------------------------------------------------------------
         # Dead-man's-switch Lambda — alerts if cron didn't write last_run.json
         # ------------------------------------------------------------------
         deadManLogGroup = logs.LogGroup(
