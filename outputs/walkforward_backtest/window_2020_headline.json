@@ -1,0 +1,48 @@
+{
+  "signal": {
+    "ic_mean": 0.15270633968177105,
+    "ic_ir": 1.3819607096464284,
+    "rank_ic_mean": 0.10506325206645953,
+    "rank_ic_ir": 1.2592932814339148
+  },
+  "strategy_post_cost": {
+    "mean": 0.008189619074497907,
+    "std": 0.023954680302820202,
+    "annualized_return": 1.9491293397305018,
+    "information_ratio": 5.274263232598174,
+    "max_drawdown": -0.39050275949673047
+  },
+  "excess_post_cost": {
+    "mean": 0.00748721063156371,
+    "std": 0.02048793118425873,
+    "annualized_return": 1.7819561303121632,
+    "information_ratio": 5.637809832953816,
+    "max_drawdown": -0.09009473427023984
+  },
+  "config": {
+    "provider_uri": "~/.qlib/qlib_data/in_data",
+    "region": "cn",
+    "benchmark": "NIFTY50",
+    "train": [
+      "2008-01-01",
+      "2018-12-31"
+    ],
+    "valid": [
+      "2019-01-01",
+      "2019-12-31"
+    ],
+    "test": [
+      "2020-01-01",
+      "2020-12-31"
+    ],
+    "rebalance": 5,
+    "topk": 30,
+    "n_drop": 5,
+    "capital": 1000000,
+    "open_cost": 0.0015,
+    "close_cost": 0.0025,
+    "min_cost": 5.0,
+    "limit_threshold": 0.095,
+    "out_dir": "outputs/walkforward_backtest/window_2020"
+  }
+}

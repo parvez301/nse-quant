@@ -1,0 +1,34 @@
+{
+  "stats": {
+    "rows_before": 400408,
+    "rows_after": 395662,
+    "rows_dropped_pct": 0.011852910031767583,
+    "min_universe_per_day": 642,
+    "median_universe_per_day": 695.0,
+    "max_universe_per_day": 761
+  },
+  "strategy_post_cost": {
+    "mean": 0.0014368239852130542,
+    "std": 0.01635679871756882,
+    "annualized_return": 0.3419641084807069,
+    "information_ratio": 1.3551698731873685,
+    "max_drawdown": -0.2730050649078072
+  },
+  "excess_post_cost": {
+    "mean": 0.0012138206312241385,
+    "std": 0.012643188172840502,
+    "annualized_return": 0.28888931023134495,
+    "information_ratio": 1.481106853955044,
+    "max_drawdown": -0.17897554646517477
+  },
+  "config": {
+    "warmup_days": 60,
+    "test_range": [
+      "2024-01-01",
+      "2026-04-23"
+    ],
+    "benchmark": "NIFTY50",
+    "topk": 30,
+    "n_drop": 5
+  }
+}

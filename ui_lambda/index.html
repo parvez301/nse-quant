@@ -1,0 +1,1033 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>NSE Quant — Daily Review</title>
+<style>
+  :root {
+    --bg: #0b0d10;
+    --panel: #14171c;
+    --panel-2: #1b1f26;
+    --border: #262b34;
+    --text: #e6e8eb;
+    --muted: #8a93a0;
+    --accent: #6ee7b7;
+    --buy: #6ee7b7;
+    --sell: #fca5a5;
+    --hold: #fcd34d;
+    --warn: #f87171;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    font-size: 14px;
+    line-height: 1.45;
+  }
+  header {
+    padding: 16px 24px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: baseline;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+  header h1 { margin: 0; font-size: 16px; font-weight: 600; }
+  header .meta { color: var(--muted); font-size: 12px; }
+  main { padding: 16px 24px; display: grid; gap: 16px; }
+  .grid { display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(380px, 1fr)); }
+  .card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 16px;
+  }
+  .card h2 { margin: 0 0 12px 0; font-size: 13px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; }
+  table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; table-layout: fixed; }
+  th, td { padding: 6px 8px; text-align: left; border-bottom: 1px solid var(--border); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  th { color: var(--muted); font-weight: 500; font-size: 12px; }
+  td.num { text-align: right; font-variant-numeric: tabular-nums; }
+  /* Action tables share an identical column layout: symbol pill | rank | extra */
+  .action-table { table-layout: fixed; }
+  .action-table th:nth-child(1), .action-table td:nth-child(1) { width: 38%; }
+  .action-table th:nth-child(2), .action-table td:nth-child(2) { width: 18%; text-align: right; }
+  .action-table th:nth-child(3), .action-table td:nth-child(3) { width: 44%; text-align: right; }
+  .action-table td.reason, .action-table th.reason { text-align: left !important; color: var(--muted); font-size: 12px; white-space: normal; }
+  .pill { display: inline-block; padding: 2px 10px; border-radius: 999px; font-size: 11px; font-weight: 600; min-width: 90px; text-align: center; }
+  .pill.buy  { background: rgba(110,231,183,0.12); color: var(--buy); }
+  .pill.sell { background: rgba(252,165,165,0.12); color: var(--sell); }
+  .pill.hold { background: rgba(252,211,77,0.12);  color: var(--hold); }
+  .section-note {
+    color: var(--muted); font-size: 12px; line-height: 1.5;
+    margin: 4px 0 10px 0; padding: 8px 10px;
+    background: var(--panel-2); border-left: 2px solid var(--border); border-radius: 4px;
+  }
+  .section-note strong { color: var(--text); }
+  .section-note.buy  { border-left-color: var(--buy); }
+  .section-note.sell { border-left-color: var(--sell); }
+  .section-note.hold { border-left-color: var(--hold); }
+  .banner-halt {
+    background: rgba(248,113,113,0.10);
+    border: 1px solid var(--warn);
+    color: var(--warn);
+    padding: 12px 16px; border-radius: 8px;
+    white-space: pre-wrap;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 12px;
+  }
+  .banner-ok { color: var(--accent); font-size: 12px; }
+  .empty { color: var(--muted); font-style: italic; padding: 8px 0; }
+  .equity-row { display: flex; justify-content: space-between; padding: 4px 0; }
+  .equity-row .k { color: var(--muted); }
+  .alerts {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 12px; max-height: 240px; overflow: auto;
+    background: var(--panel-2); padding: 8px; border-radius: 6px;
+  }
+  .alerts div { padding: 2px 0; border-bottom: 1px solid var(--border); }
+  details summary { cursor: pointer; color: var(--muted); font-size: 12px; }
+  details[open] summary { color: var(--text); margin-bottom: 8px; }
+  .tabs { display: flex; gap: 4px; }
+  .tab {
+    background: transparent; border: 1px solid var(--border); color: var(--muted);
+    padding: 4px 12px; border-radius: 6px; cursor: pointer; font: inherit;
+  }
+  .tab.active { color: var(--text); border-color: var(--accent); background: rgba(110,231,183,0.06); }
+  .doc { max-width: 1100px; margin: 0 auto; width: 100%; }
+  .doc h2 { margin: 24px 0 8px; font-size: 14px; color: var(--accent); text-transform: uppercase; letter-spacing: 0.04em; }
+  .doc h2:first-child { margin-top: 0; }
+  .doc p { margin: 8px 0; color: var(--text); }
+  .doc ul, .doc ol { margin: 8px 0; padding-left: 22px; }
+  .doc li { margin: 6px 0; }
+  .doc em { color: var(--text); font-style: italic; }
+  .doc code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; background: var(--panel-2); padding: 1px 6px; border-radius: 4px; }
+  .doc .callout { background: rgba(252,211,77,0.06); border-left: 3px solid var(--hold); padding: 12px 16px; margin: 16px 0; border-radius: 4px; }
+  .doc .callout-warn { background: rgba(248,113,113,0.06); border-left: 3px solid var(--warn); padding: 12px 16px; margin: 16px 0; border-radius: 4px; }
+  .doc table { margin: 12px 0; font-size: 13px; }
+  .doc a { color: var(--accent); }
+  .doc h3 { margin: 16px 0 6px 0; font-size: 13px; font-weight: 600; }
+  .status { display: inline-block; padding: 1px 8px; border-radius: 999px; font-size: 10px; font-weight: 600; margin-right: 6px; vertical-align: middle; }
+  .status.done    { background: rgba(110,231,183,0.15); color: var(--buy); }
+  .status.next    { background: rgba(252,211,77,0.15);  color: var(--hold); }
+  .status.hard    { background: rgba(252,165,165,0.15); color: var(--sell); }
+  .status.now     { background: rgba(110,231,183,0.15); color: var(--buy); }
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+
+<script type="module">
+import { html, render } from "https://cdn.jsdelivr.net/npm/lit-html@3/+esm";
+
+const TAB_FROM_HASH = {
+  "#methodology": "methodology",
+  "#explorer": "explorer",
+};
+
+let state = {
+  tab: TAB_FROM_HASH[location.hash] || "dashboard",
+  loading: false,
+  error: null,
+  lastRun: null,
+  halt: null,
+  decisions: [],
+  portfolio: [],
+  equity: [],
+  alerts: [],
+  // Explorer state
+  symbols: null,           // [{symbol, first_date, last_date, n_bars}]
+  symbolsLoading: false,
+  selectedSymbol: null,
+  selectedRange: "5Y",
+  series: null,            // {symbol, n_bars, rows: [...]}
+  seriesLoading: false,
+  seriesError: null,
+  attribution: null,       // {symbol, score, bias, top_contributors:[…]}
+  attributionLoading: false,
+  attributionError: null,
+};
+
+function setTab(t) {
+  state.tab = t;
+  location.hash = t === "dashboard" ? "" : `#${t}`;
+  draw();
+  if (t === "explorer") loadSymbolsIfNeeded();
+}
+window.addEventListener("hashchange", () => {
+  state.tab = TAB_FROM_HASH[location.hash] || "dashboard";
+  draw();
+  if (state.tab === "explorer") loadSymbolsIfNeeded();
+});
+
+async function api(path) {
+  const res = await fetch(path);
+  if (!res.ok) throw new Error(`${path} -> ${res.status}`);
+  return res.json();
+}
+
+async function refresh() {
+  state.loading = true;
+  state.error = null;
+  draw();
+  try {
+    const [lastRun, halt, decisions, portfolio, equity, alerts,
+           stratified, costSensitivity, survivorship, outage] = await Promise.all([
+      api("/api/last_run"),
+      api("/api/halt"),
+      api("/api/decisions"),
+      api("/api/portfolio"),
+      api("/api/equity"),
+      api("/api/alerts"),
+      api("/api/stratified").catch(() => ({})),
+      api("/api/cost_sensitivity").catch(() => ({})),
+      api("/api/survivorship").catch(() => ({})),
+      api("/api/outage").catch(() => ({})),
+    ]);
+    Object.assign(state, {
+      lastRun, halt, decisions, portfolio, equity, alerts: alerts.lines,
+      stratified, costSensitivity, survivorship, outage,
+    });
+  } catch (e) {
+    state.error = e.message;
+  } finally {
+    state.loading = false;
+    draw();
+  }
+}
+
+const fmtNum = (n, d = 0) =>
+  n == null || n === "" ? "—" : Number(n).toLocaleString("en-IN", { maximumFractionDigits: d, minimumFractionDigits: d });
+const fmtPct = (n, d = 2) =>
+  n == null ? "—" : `${(n * 100).toFixed(d)}%`;
+const fmtTs = (s) => (s ? new Date(s).toLocaleString() : "—");
+
+function haltBanner() {
+  if (!state.halt) return null;
+  if (state.halt.halted) {
+    return html`<div class="banner-halt">⛔ HALTED\n${state.halt.reason}</div>`;
+  }
+  return html`<div class="banner-ok">✅ Running — no HALT</div>`;
+}
+
+function lastRunCard() {
+  const lr = state.lastRun;
+  if (!lr || lr.never_run) return html`<div class="empty">No run recorded yet.</div>`;
+  return html`
+    <div class="equity-row"><span class="k">As of</span><span>${lr.date}</span></div>
+    <div class="equity-row"><span class="k">Started</span><span>${fmtTs(lr.started_at)}</span></div>
+    <div class="equity-row"><span class="k">Finished</span><span>${fmtTs(lr.finished_at)}</span></div>
+    <div class="equity-row"><span class="k">Exit code</span><span style="color:${lr.exit_code === 0 ? 'var(--accent)' : 'var(--warn)'}">${lr.exit_code}</span></div>
+  `;
+}
+
+function equitySummary() {
+  if (!state.equity.length) return html`<div class="empty">No paper equity yet.</div>`;
+  const rows = state.equity;
+  const last = rows[rows.length - 1];
+  const first = rows[0];
+  const peak = Math.max(...rows.map((r) => +r.total_equity));
+  const dd = +last.total_equity / peak - 1;
+  const totalRet = +last.total_equity / +first.total_equity - 1;
+  const dailyRet = rows.length > 1 ? +last.total_equity / +rows[rows.length - 2].total_equity - 1 : 0;
+
+  // NIFTY 50 benchmark — comparable return over the same window if data exists.
+  const niftyFirst = rows.find((r) => r.nifty50_close && +r.nifty50_close > 0);
+  const niftyLast = [...rows].reverse().find((r) => r.nifty50_close && +r.nifty50_close > 0);
+  const niftyTotal = niftyFirst && niftyLast && niftyFirst !== niftyLast
+    ? +niftyLast.nifty50_close / +niftyFirst.nifty50_close - 1 : null;
+  const alpha = niftyTotal != null ? totalRet - niftyTotal : null;
+
+  const earlyDays = rows.length < 10;
+  const caveat = earlyDays
+    ? html`<div style="background:rgba(252,211,77,0.08);border-left:2px solid var(--hold);padding:8px 12px;margin:0 0 12px 0;font-size:12px;color:var(--muted);border-radius:4px;">
+        Equity history has only <strong style="color:var(--hold)">${rows.length} day${rows.length === 1 ? '' : 's'}</strong> of cloud cron data
+        — these numbers are not yet statistically meaningful. Wait until ~3 weeks for the trend to stabilise before judging the strategy.
+      </div>`
+    : null;
+
+  return html`
+    ${caveat}
+    <div class="equity-row"><span class="k">Total equity</span><span>₹${fmtNum(last.total_equity)}</span></div>
+    <div class="equity-row"><span class="k">Daily P&L</span>
+      <span style="color:${dailyRet >= 0 ? 'var(--accent)' : 'var(--warn)'}">${fmtPct(dailyRet)}</span></div>
+    <div class="equity-row"><span class="k">Since inception (${rows.length}d)</span>
+      <span style="color:${totalRet >= 0 ? 'var(--accent)' : 'var(--warn)'}">${fmtPct(totalRet)}</span></div>
+    ${niftyTotal != null ? html`
+      <div class="equity-row"><span class="k">NIFTY 50 same window</span>
+        <span style="color:${niftyTotal >= 0 ? 'var(--accent)' : 'var(--warn)'}">${fmtPct(niftyTotal)}</span></div>
+      <div class="equity-row"><span class="k">Strategy − NIFTY (alpha)</span>
+        <span style="color:${alpha >= 0 ? 'var(--accent)' : 'var(--warn)'}; font-weight:600;">${fmtPct(alpha)}</span></div>
+    ` : ""}
+    <div class="equity-row"><span class="k">Drawdown from peak</span>
+      <span style="color:${dd >= -0.05 ? 'var(--muted)' : 'var(--warn)'}">${fmtPct(dd)}</span></div>
+    <div class="equity-row"><span class="k">Positions / Cash</span><span>${last.n_positions} / ₹${fmtNum(last.cash)}</span></div>
+  `;
+}
+
+function todayActions() {
+  if (!state.decisions.length) return html`<div class="empty">No decisions yet.</div>`;
+  const today = state.decisions[0];
+  const buy = today.actions?.BUY || [];
+  const sell = today.actions?.SELL || [];
+  const hold = today.actions?.HOLD || [];
+  const renderBuy = (items) =>
+    items.length
+      ? html`<table class="action-table">
+          <thead><tr><th>Symbol</th><th>Rank</th><th>Score</th></tr></thead>
+          <tbody>${items.map(
+            (it) => html`<tr>
+              <td><span class="pill buy">${it.symbol}</span></td>
+              <td class="num">${it.rank ?? "—"}</td>
+              <td class="num">${it.score != null ? it.score.toFixed(4) : "—"}</td>
+            </tr>`
+          )}</tbody>
+        </table>`
+      : html`<div class="empty">none</div>`;
+  const renderSell = (items) =>
+    items.length
+      ? html`<table class="action-table">
+          <thead><tr><th>Symbol</th><th>Rank now</th><th class="reason">Reason</th></tr></thead>
+          <tbody>${items.map(
+            (it) => html`<tr>
+              <td><span class="pill sell">${it.symbol}</span></td>
+              <td class="num">${it.rank_now ?? "—"}</td>
+              <td class="reason">${it.reason || "—"}</td>
+            </tr>`
+          )}</tbody>
+        </table>`
+      : html`<div class="empty">none</div>`;
+  const renderHold = (items) =>
+    items.length
+      ? html`<table class="action-table">
+          <thead><tr><th>Symbol</th><th>Rank</th><th>Score</th></tr></thead>
+          <tbody>${items.map(
+            (it) => html`<tr>
+              <td><span class="pill hold">${it.symbol}</span></td>
+              <td class="num">${it.rank ?? "—"}</td>
+              <td class="num">${it.score != null ? it.score.toFixed(4) : "—"}</td>
+            </tr>`
+          )}</tbody>
+        </table>`
+      : html`<div class="empty">none</div>`;
+  return html`
+    <div style="color:var(--muted);font-size:12px;margin-bottom:8px;">As of ${today.as_of} · universe ${today.liquid_universe_size}/${today.universe_size} · top-${today.topk}</div>
+    <h3 style="margin:8px 0 4px 0;font-size:12px;color:var(--buy);">BUY (${buy.length})</h3>
+    <div class="section-note buy"><strong>BUY</strong> = top-K names by model score for ${today.as_of}. The cron buys these at today's close. Higher score = stronger predicted out-performance vs peers over the next ~5 trading days.</div>
+    ${renderBuy(buy)}
+    <h3 style="margin:16px 0 4px 0;font-size:12px;color:var(--sell);">SELL (${sell.length})</h3>
+    <div class="section-note sell"><strong>SELL</strong> = stocks already held that have fallen out of the top-(K + buffer). The model isn't saying "this will go down" — it's saying "this no longer ranks in our buy zone, rotate the capital."</div>
+    ${renderSell(sell)}
+    <details style="margin-top:16px;">
+      <summary>HOLD (${hold.length})</summary>
+      <div class="section-note hold"><strong>HOLD</strong> = currently owned + still inside the buffer band (top-K to top-(K+buffer)). Not strong enough to add fresh capital, not weak enough to rotate out. Reduces churn and trading costs.</div>
+      ${renderHold(hold)}
+    </details>
+  `;
+}
+
+function portfolioCard() {
+  if (!state.portfolio.length) return html`<div class="empty">No open positions.</div>`;
+  // Sort biggest position value first so top of table is most material
+  const rows = [...state.portfolio].sort((a, b) =>
+    (+b.position_value || +b.shares * +b.avg_price || 0) - (+a.position_value || +a.shares * +a.avg_price || 0)
+  );
+  const hasMarks = rows.some((p) => p.last_price && +p.last_price > 0);
+  return html`
+    <div class="section-note">
+      <strong>Open positions</strong> = the actual paper portfolio held right now, sorted by position size.
+      ${hasMarks
+        ? html`Marks update daily at post-close. P&L is unrealised (mark-to-market vs. avg cost).`
+        : html`Per-position P&L appears once the next mark step writes <code>last_price</code> back to the CSV (Monday 08:00 IST cron).`}
+    </div>
+    <table>
+      <thead><tr>
+        <th>Symbol</th>
+        <th class="num">Shares</th>
+        <th class="num">Avg cost</th>
+        ${hasMarks ? html`<th class="num">Last</th><th class="num">Value</th><th class="num">P&L</th>` : html`<th class="num">Cost basis</th>`}
+      </tr></thead>
+      <tbody>${rows.map((p) => {
+        const shares = +p.shares || 0;
+        const avg = +p.avg_price || 0;
+        const last = +p.last_price || 0;
+        const value = +p.position_value || (shares * (last || avg));
+        const pnl = +p.unrealized_pnl;
+        const pnlPct = avg && last ? (last - avg) / avg : null;
+        return html`<tr>
+          <td>${p.symbol}</td>
+          <td class="num">${fmtNum(shares)}</td>
+          <td class="num">₹${fmtNum(avg, 2)}</td>
+          ${hasMarks ? html`
+            <td class="num">${last ? '₹' + fmtNum(last, 2) : '—'}</td>
+            <td class="num">${value ? '₹' + fmtNum(value, 0) : '—'}</td>
+            <td class="num" style="color:${isNaN(pnl) ? 'var(--muted)' : pnl >= 0 ? 'var(--accent)' : 'var(--warn)'}">
+              ${isNaN(pnl) ? '—' : `₹${fmtNum(pnl, 0)} (${pnlPct != null ? fmtPct(pnlPct) : '—'})`}
+            </td>
+          ` : html`<td class="num">₹${fmtNum(shares * avg, 0)}</td>`}
+        </tr>`;
+      })}</tbody>
+    </table>
+    ${!hasMarks ? html`<div style="color:var(--muted);font-size:11px;margin-top:8px;font-style:italic;">Per-position P&L appears once the next paper-mark step writes <code>last_price</code> back to the portfolio CSV (Monday 08:00 IST cron).</div>` : ""}
+  `;
+}
+
+function alertsCard() {
+  if (!state.alerts.length) return html`<div class="empty">No alerts.</div>`;
+  return html`<div class="alerts">${state.alerts.slice().reverse().map((l) => html`<div>${l}</div>`)}</div>`;
+}
+
+function decisionsHistoryCard() {
+  if (state.decisions.length < 2) return html`<div class="empty">Run history will appear here.</div>`;
+  return html`
+    <div class="section-note">
+      <strong>One row per trading day.</strong> Universe = liquid stocks / total stocks scored.
+      BUY/SELL counts &gt; 0 on a given day mean portfolio rotation occurred. Init day shows BUY=K, SELL=0.
+    </div>
+    <table>
+      <thead><tr><th>Date</th><th class="num">Universe</th><th class="num">Top-K</th><th class="num">BUY</th><th class="num">SELL</th></tr></thead>
+      <tbody>${state.decisions.map((d) => html`
+        <tr>
+          <td>${d.as_of}</td>
+          <td class="num">${d.liquid_universe_size}/${d.universe_size}</td>
+          <td class="num">${d.topk}</td>
+          <td class="num" style="color:var(--buy)">${(d.actions?.BUY || []).length}</td>
+          <td class="num" style="color:var(--sell)">${(d.actions?.SELL || []).length}</td>
+        </tr>
+      `)}</tbody>
+    </table>`;
+}
+
+function pageHeader() {
+  return html`
+    <header>
+      <h1>NSE Quant</h1>
+      <span class="tabs">
+        <button class="tab ${state.tab === "dashboard" ? "active" : ""}" @click=${() => setTab("dashboard")}>Dashboard</button>
+        <button class="tab ${state.tab === "explorer" ? "active" : ""}" @click=${() => setTab("explorer")}>Explorer</button>
+        <button class="tab ${state.tab === "methodology" ? "active" : ""}" @click=${() => setTab("methodology")}>Methodology</button>
+      </span>
+      <span class="meta">${
+        state.tab === "dashboard" ? (state.loading ? "loading…" : state.error ? `error: ${state.error}` : "")
+        : state.tab === "explorer" ? (state.symbolsLoading ? "loading symbols…" : state.seriesLoading ? "loading series…" : "")
+        : ""
+      }</span>
+      <span style="margin-left:auto;">
+        ${state.tab === "dashboard"
+          ? html`<button @click=${refresh} style="background:transparent;border:1px solid var(--border);color:var(--text);padding:4px 12px;border-radius:6px;cursor:pointer;">Refresh</button>`
+          : html`<a href="mailto:?subject=Feedback%20on%20NSE%20Quant&body=${encodeURIComponent(location.href)}" style="background:transparent;border:1px solid var(--border);color:var(--text);padding:4px 12px;border-radius:6px;cursor:pointer;text-decoration:none;font-size:13px;">Email feedback</a>`}
+      </span>
+    </header>`;
+}
+
+function dashboardView() {
+  return html`
+    <main>
+      ${haltBanner()}
+      <div class="grid">
+        <div class="card"><h2>Last Run</h2>${lastRunCard()}</div>
+        <div class="card"><h2>Paper P&L</h2>${equitySummary()}</div>
+      </div>
+      <div class="grid">
+        <div class="card"><h2>Today's Actions</h2>${todayActions()}</div>
+        <div class="card"><h2>Open Positions</h2>${portfolioCard()}</div>
+      </div>
+      <div class="grid">
+        <div class="card"><h2>Recent Decisions</h2>${decisionsHistoryCard()}</div>
+        <div class="card"><h2>Alerts</h2>${alertsCard()}</div>
+      </div>
+    </main>`;
+}
+
+function liveStratified() {
+  const s = state.stratified;
+  if (!s || !s.scenarios) return html`<p style="color:var(--muted);font-size:12px;">Stratified stats not yet computed (run <code>nse_stratified_stats.py</code>).</p>`;
+  const rows = s.scenarios.map((sc) => html`
+    <tr>
+      <td>${sc.label}</td>
+      <td class="num">${sc.n_windows}</td>
+      <td class="num">${fmtPct(sc.mean_excess)}</td>
+      <td class="num">${fmtPct(sc.median_excess)}</td>
+      <td class="num">${fmtPct(sc.win_rate, 0)}</td>
+      <td class="num">${sc.t_stat == null ? "—" : Number(sc.t_stat).toFixed(2)}</td>
+      <td class="num">${sc.worst_window ? `${sc.worst_window.year}: ${fmtPct(sc.worst_window.excess)}` : "—"}</td>
+    </tr>
+  `);
+  const worst2yr = s.rolling_2yr && s.rolling_2yr.worst;
+  return html`
+    <div class="callout-warn" style="margin-top:8px;">
+      <p style="margin-top:0;font-weight:600;">Live stratified excess-return stats (per walk-forward window)</p>
+      <table>
+        <thead><tr><th>Scenario</th><th class="num">N</th><th class="num">Mean</th><th class="num">Median</th><th class="num">Win-rate</th><th class="num">t-stat</th><th class="num">Worst yr</th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+      ${worst2yr ? html`<p style="margin-bottom:0;font-size:12px;color:var(--muted);">Worst rolling 2-year period: <strong>${worst2yr.period}</strong> at ${fmtPct(worst2yr.mean_excess)} mean excess.</p>` : null}
+    </div>
+  `;
+}
+
+function liveSurvivorship() {
+  const s = state.survivorship;
+  if (!s || s.n_universe_total == null) return html`<p style="color:var(--muted);font-size:12px;">Survivorship estimate not yet computed.</p>`;
+  const lo = s.estimated_annual_penalty_bps && s.estimated_annual_penalty_bps.low;
+  const hi = s.estimated_annual_penalty_bps && s.estimated_annual_penalty_bps.high;
+  return html`
+    <div class="callout-warn" style="margin-top:8px;">
+      <p style="margin-top:0;font-weight:600;">Live survivorship lower-bound</p>
+      <table>
+        <tbody>
+          <tr><td>Visible tickers in universe</td><td class="num">${fmtNum(s.n_universe_total)}</td></tr>
+          <tr><td>Stopped trading inside the window</td><td class="num">${fmtNum(s.n_exited_visible)}</td></tr>
+          <tr><td>Annual visible exit rate</td><td class="num">${fmtPct(s.annual_exit_rate_observed, 3)}</td></tr>
+          <tr><td>Estimated annual penalty (lower bound)</td><td class="num">${lo == null ? "—" : `${lo}–${hi} bps`}</td></tr>
+        </tbody>
+      </table>
+      <p style="margin-bottom:0;font-size:12px;color:var(--muted);">${s.interpretation}</p>
+    </div>
+  `;
+}
+
+function liveCostSensitivity() {
+  const s = state.costSensitivity;
+  if (!s || !s.cells) return html`<p style="color:var(--muted);font-size:12px;">Cost sensitivity matrix not yet computed.</p>`;
+  const rows = s.cells.map((c) => html`
+    <tr>
+      <td class="num">₹${fmtNum(c.capital_inr)}</td>
+      <td class="num">${c.base_bps}</td>
+      <td class="num">${fmtPct(c.excess_ann_return)}</td>
+      <td class="num">${c.sharpe == null ? "—" : Number(c.sharpe).toFixed(2)}</td>
+      <td class="num">${fmtPct(c.max_drawdown)}</td>
+      <td class="num">${fmtPct(c.total_cost_pct)}</td>
+    </tr>
+  `);
+  return html`
+    <div class="callout-warn" style="margin-top:8px;">
+      <p style="margin-top:0;font-weight:600;">Live cost sensitivity (excess vs NIFTY 50)</p>
+      <table>
+        <thead><tr><th class="num">AUM</th><th class="num">Base bps</th><th class="num">Excess ann.</th><th class="num">Sharpe</th><th class="num">Max DD</th><th class="num">Total cost %</th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+      <p style="margin-bottom:0;font-size:12px;color:var(--muted);">Higher AUM and higher base bps both eat into returns. Cost % is cumulative over the whole backtest, not annualised.</p>
+    </div>
+  `;
+}
+
+function liveOutage() {
+  const s = state.outage;
+  if (!s || !s.scenarios) return html`<p style="color:var(--muted);font-size:12px;">Outage Monte Carlo not yet computed.</p>`;
+  const rows = s.scenarios.map((sc) => html`
+    <tr>
+      <td class="num">${fmtPct(sc.outage_rate, 0)}</td>
+      <td class="num">${sc.expected_missed_days_per_year}</td>
+      <td class="num">${fmtPct(sc.pooled_median_excess)}</td>
+      <td class="num">${fmtPct(sc.pooled_p10)}</td>
+      <td class="num">${fmtPct(sc.pooled_p90)}</td>
+    </tr>
+  `);
+  return html`
+    <div class="callout-warn" style="margin-top:8px;">
+      <p style="margin-top:0;font-weight:600;">Live outage Monte Carlo (${fmtNum(s.n_trials_per_cell)} trials × ${s.n_windows} windows)</p>
+      <table>
+        <thead><tr><th class="num">Outage rate</th><th class="num">Missed days/yr</th><th class="num">Median excess</th><th class="num">P10</th><th class="num">P90</th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+      <p style="margin-bottom:0;font-size:12px;color:var(--muted);">Baseline mean excess: <strong>${fmtPct(s.baseline_mean_excess)}</strong>. Degradation is roughly linear because alpha compounds multiplicatively — missing 5% of days costs ~5% of the year's alpha.</p>
+    </div>
+  `;
+}
+
+function methodologyView() {
+  return html`
+    <main>
+      <div class="card doc">
+        <h2>What this is</h2>
+        <p>A daily, fully systematic stock-ranking model for the Indian equity market. Every trading day at 08:00 IST, an automated job generates a ranked list of 750+ NSE stocks and emits a small basket of <span class="pill buy">BUY</span> / <span class="pill sell">SELL</span> / <span class="pill hold">HOLD</span> decisions for a paper portfolio. <strong>Nothing here is live-traded.</strong> This dashboard is the audit log.</p>
+        <p>The goal is to share the actual day-to-day decisions and equity curve so people I trust can poke holes in the methodology, the costs, and the assumptions — before any real money goes near it.</p>
+
+        <h2>How it actually works (plain English)</h2>
+        <p>Think of this as an automated stock-screener that wakes up every morning, looks at ~750 Indian companies, and ranks them from "most likely to outperform peers in the next few days" to "most likely to underperform" — purely based on patterns it learned from the last 15 years of trading data.</p>
+        <p>Every weekday at 8 AM IST, four things happen, in order:</p>
+        <ol>
+          <li><strong>Refresh prices.</strong> Pull yesterday's close for ~750 NSE stocks (NIFTY 500 + Microcap 250).</li>
+          <li><strong>Cook up "ingredients".</strong> For each stock, compute 158 numbers describing its recent behaviour — things like <em>"how much has this moved in the last 5 days?"</em>, <em>"is volume above its 20-day average?"</em>, <em>"how close is the price to its recent high?"</em>. These are the inputs to the model.</li>
+          <li><strong>Score and rank.</strong> A pre-trained statistical model (gradient-boosted decision trees — picture a thousand small if-then rules voting together) reads those 158 numbers per stock and outputs one score. Sort 750 scores high to low.</li>
+          <li><strong>Decide.</strong> Top ~30 stocks → today's <span class="pill buy">BUY</span> list. Anything currently held that has dropped out of the top ~35 → <span class="pill sell">SELL</span>. The rest → <span class="pill hold">HOLD</span>.</li>
+        </ol>
+        <p>The model never tries to predict <em>how much</em> a stock will move. It only tries to <em>order</em> stocks correctly — saying "A will probably do better than B." If that ranking is right more often than chance, the strategy makes money over many trades, even though plenty of individual picks are wrong.</p>
+
+        <h2>What are those 158 "ingredients" actually?</h2>
+        <p>We didn't invent these. The system uses an off-the-shelf feature set called <strong>Alpha158</strong> — published by Microsoft as part of the open-source <a href="https://github.com/microsoft/qlib" target="_blank" rel="noopener">Qlib</a> library and used widely in quant research since 2020. Standing on shoulders, not engineering from scratch — and that's a deliberate choice. Battle-tested features tend to overfit less than home-baked ones.</p>
+        <p>Despite the scary number, the 158 features are mostly simple math on price and volume history. They cluster into about six flavours:</p>
+        <table>
+          <thead><tr><th>Flavour</th><th class="num">Count</th><th>Plain-English example</th></tr></thead>
+          <tbody>
+            <tr><td><strong>Momentum</strong></td><td class="num">~30</td><td>Total return over the last 5 / 10 / 20 / 30 / 60 days. "How much has it moved lately?"</td></tr>
+            <tr><td><strong>Mean-reversion</strong></td><td class="num">~30</td><td>Today's close ÷ 20-day average − 1; how many std-devs above its 30-day mean. "How stretched is it?"</td></tr>
+            <tr><td><strong>Volatility</strong></td><td class="num">~20</td><td>Rolling standard deviation of daily returns over various windows. "How jumpy has it been?"</td></tr>
+            <tr><td><strong>Volume signals</strong></td><td class="num">~25</td><td>Today's volume vs. 20-day average; price-volume correlation. "Is volume confirming the move?"</td></tr>
+            <tr><td><strong>Candle shape</strong></td><td class="num">~20</td><td>(close − open) ÷ (high − low); upper-shadow ratio. "What does today's bar look like?"</td></tr>
+            <tr><td><strong>Cross-stats</strong></td><td class="num">~30</td><td>Correlation with NIFTY over rolling windows; rank within the universe. Mixes of the above.</td></tr>
+          </tbody>
+        </table>
+        <p>For each underlying idea, the same calculation is repeated across several time windows (5, 10, 20, 30, 60 trading days). That's how a handful of core concepts inflate to 158 columns.</p>
+        <p><strong>So how were these patterns "created"?</strong> They weren't <em>learned</em> — they're hand-crafted formulas from decades of quant-research literature. Roughly:</p>
+        <ol>
+          <li>Practitioners noticed certain calculations (5-day momentum, 20-day volume z-score, etc.) had statistical edges in equity returns.</li>
+          <li>Microsoft's Qlib team curated 158 of the most commonly-cited ones into a single bundle.</li>
+          <li>We compute all 158 daily for every Indian stock, hand them to the LightGBM model, and let it figure out which combinations matter <em>specifically for the NSE</em> over our 15-year training window.</li>
+        </ol>
+        <p>So: the <em>ingredients</em> are off-the-shelf and well-understood. The <em>recipe</em> — how to combine them, which signals matter more in Indian markets, what counts as a strong vs. weak vote — is what the model learned from data.</p>
+
+        <h2>What the model actually learned (and didn't)</h2>
+        <p><strong>Learned:</strong> recurring price/volume patterns across thousands of stocks. Things like "names that have outperformed peers over the last 1–3 weeks but pulled back slightly in the last 2 days, in liquid stocks with above-average volume, tend to keep outperforming for a few more days." Many such patterns, blended into one score. This is closer to <em>"momentum with carefully-tuned exceptions"</em> than to anything magical.</p>
+        <p><strong>Did NOT learn:</strong> anything about specific companies, news, earnings, management, or macro events. The model has never read an annual report. It only sees price and volume history. That's both its strength (no human bias, no opinions) and its limit — <em>it'll happily recommend a stock the day after a fraud announcement if the pre-fraud chart still looks good</em>. A human in the loop would catch that. This system has none.</p>
+        <p><strong>Why we don't retrain daily:</strong> the patterns it captures (momentum, mean-reversion, volume confirmation) are fairly stable across years. Retraining too often risks fitting yesterday's noise. Realistic cadence: refresh the model every quarter or so on fresh data.</p>
+
+        <h2>The pipeline (one paragraph)</h2>
+        <p>Pull adjusted daily OHLCV for ~750 NSE/BSE stocks from <code>yfinance</code> → store in Microsoft <a href="https://github.com/microsoft/qlib" target="_blank" rel="noopener">Qlib</a>'s binary format → compute the <strong>Alpha158</strong> feature set (158 standard cross-sectional and time-series features: momentum windows, mean-reversion ratios, volume-price interactions, etc.) → score every stock with a pre-trained <strong>LightGBM ranker</strong> → take the top <em>K</em> as today's BUY list, the bottom of currently-held names as SELL.</p>
+
+        <h2>Universe</h2>
+        <ul>
+          <li><strong>NIFTY Total Market 750</strong> = NIFTY 500 + Nifty Microcap 250.</li>
+          <li>Liquidity gate: 20-day rolling turnover floor (drops names you couldn't actually trade at retail size).</li>
+          <li>No look-ahead in the universe: the daily file uses point-in-time membership where possible.</li>
+        </ul>
+
+        <h2>The model</h2>
+        <ul>
+          <li><strong>LightGBM</strong> gradient-boosted ranker (no deep learning, no GPU). The output is a per-stock score; rank is what matters, not the absolute value.</li>
+          <li>Trained on ~15 years of history (~2010–2024 in the live model).</li>
+          <li>Loss function ranks stocks within each cross-section against the next-period forward return.</li>
+          <li>Default daily output: top-30 names re-evaluated every 5 trading days, with a 5-name buffer before forced rotation. Lower turnover → lower realised costs.</li>
+        </ul>
+
+        <h2>How honest is the backtest?</h2>
+        <table>
+          <thead><tr><th>Metric</th><th class="num">Value</th></tr></thead>
+          <tbody>
+            <tr><td>Walk-forward windows</td><td class="num">8 annual</td></tr>
+            <tr><td>Positive windows</td><td class="num">7 of 8</td></tr>
+            <tr><td>t-stat vs zero (excess return)</td><td class="num">3.79</td></tr>
+            <tr><td>Modelled trading cost</td><td class="num">15 bps buy + 25 bps sell</td></tr>
+            <tr><td>Rebalance frequency</td><td class="num">5 trading days</td></tr>
+          </tbody>
+        </table>
+        <p>The 15/25 bps cost is intentionally conservative for retail; a more sophisticated ADV-aware slippage model puts realistic frictions closer to ~7 bps at small AUM and rises with size.</p>
+
+        <h2 style="color:var(--warn);">Where this can lie to you (read this part)</h2>
+        <div class="callout-warn">
+          <p style="margin-top:0;"><strong>Survivorship bias is only half-fixed.</strong> The universe uses each ticker's earliest <code>yfinance</code> bar, which handles IPOs cleanly but <em>misses delisted names entirely</em> — <code>yfinance</code> drops them. A real fix needs paid point-in-time data. Assume the backtest is mildly optimistic.</p>
+          <p><strong>Two years carry the headline.</strong> 2020 (+178%) and 2021 (+107%) are post-COVID dispersion in Indian small/mid-caps — a regime, not repeatable alpha. Strip them out and the model still wins, but the honest forward expectation is <strong>+8% to +15% excess</strong>, not +30%.</p>
+          <p style="margin-bottom:0;"><strong>The portfolio is paper, the strategy is theory.</strong> Things this never models: market impact when trading above the universe's typical turnover, T+1 settlement quirks, broker outages on volatile mornings, lot rounding if you hedge with futures, and the fact that your real-world costs almost certainly aren't 15/25 bps.</p>
+        </div>
+
+        <h2>How we plan to address these</h2>
+        <p>Honest caveats matter, but writing them down isn't the same as fixing them. Here's the concrete plan, with status markers — <span class="status done">DONE</span> already shipped · <span class="status now">IN PROGRESS</span> live work · <span class="status next">PLANNED</span> realistic next step · <span class="status hard">HARD</span> requires data or money I don't have yet.</p>
+
+        <h3 style="color:var(--warn);">1. Closing the survivorship gap</h3>
+        <ul>
+          <li><span class="status next">PLANNED</span> Pull the <strong>NSE Bhavcopy archive</strong> (free, daily zip files going back to ~1995). It contains <em>every</em> stock that traded that day — including names since delisted. Stitch into the qlib data store, rerun walk-forward. This is the real fix.</li>
+          <li><span class="status next">PLANNED</span> Cross-reference NSE's published <strong>delisted securities list</strong> as a sanity check on the Bhavcopy reconstruction.</li>
+          <li><span class="status done">DONE</span> Computed and published a <strong>survivorship penalty estimate</strong> — see the live numbers below. Lower-bound only because <code>yfinance</code> drops fully-delisted names; the true penalty is likely 1.5–3× higher than the visible exit rate suggests.</li>
+          <li><span class="status hard">HARD</span> Paid PIT data (Bloomberg / Refinitiv / Sentinel). $2k+/month. Overkill for personal scale; revisit only if we ever go institutional.</li>
+        </ul>
+        ${liveSurvivorship()}
+
+        <h3 style="color:var(--warn);">2. Removing the regime dependence</h3>
+        <ul>
+          <li><span class="status done">DONE</span> <strong>Stratified results</strong> published — see the live table below. Headline mean, ex-COVID mean, low- vs high-volatility windows, and the worst rolling 2-year period are all computed from the per-window walk-forward CSV.</li>
+          <li><span class="status next">PLANNED</span> <strong>Retrain without 2020/21 data</strong> and rerun walk-forward. If the t-stat (currently 3.79) holds without those years, the patterns are stable. If it collapses, the model was leaning on the regime and we knew less than we thought.</li>
+          <li><span class="status next">PLANNED</span> <strong>Volatility scaling.</strong> Reduce position sizing in high-VIX regimes — the score's correctness doesn't change, but realised drawdowns do. Implementation: target a fixed portfolio volatility instead of fixed equal-weight.</li>
+          <li><span class="status done">DONE</span> Methodology tab already states the honest forward expectation as <strong>+8% to +15% excess</strong> (not +30%). Setting expectations is half the fix.</li>
+        </ul>
+        ${liveStratified()}
+
+        <h3 style="color:var(--warn);">3. Closing the paper-vs-real gap</h3>
+        <ul>
+          <li><span class="status done">DONE</span> Repo already includes <code>nse_slippage_model.py</code> — an <strong>ADV-aware slippage model</strong> that scales costs with your trade size relative to a name's average daily volume. Run with <code>--sweep_capital</code> to see how returns degrade as AUM grows.</li>
+          <li><span class="status done">DONE</span> <strong>Cost sensitivity matrix</strong> rendered below — excess return and total cost % at three AUM levels × four broker-bps assumptions. Place yourself on the curve.</li>
+          <li><span class="status done">DONE</span> <strong>T+1 settlement</strong> shipped in <code>paper_trade.py</code>. Sell proceeds now sit in a <code>pending_settlement.csv</code> ledger and only become spendable cash on the next trading day, matching NSE's post-2023 cycle.</li>
+          <li><span class="status done">DONE</span> <strong>Outage Monte Carlo</strong> below — randomly skips a fraction of rebalance days and reports the degraded excess-return distribution.</li>
+          <li><span class="status hard">HARD</span> Live execution: requires a broker API integration, regulatory compliance review, and the 90-day clean paper-trade gate from the project's absolute-rules list. Months of work — and deliberately not a near-term goal.</li>
+        </ul>
+        ${liveCostSensitivity()}
+        ${liveOutage()}
+
+        <p style="color:var(--muted);font-size:12px;margin-top:16px;">Each <span class="status next">PLANNED</span> item is a real to-do, not vapourware. As they ship, the labels here move to <span class="status done">DONE</span> and the corresponding numbers update inline above.</p>
+
+        <h2>Stack (for the curious)</h2>
+        <ul>
+          <li>Data: <code>yfinance</code> → Qlib binary store</li>
+          <li>Features: Qlib <code>Alpha158</code></li>
+          <li>Model: <code>LightGBM</code> ranker via Qlib's <code>LGBModel</code></li>
+          <li>Cron: AWS Fargate Spot (ARM64), scheduled by EventBridge</li>
+          <li>State: S3 (one bucket; data + outputs + audit trail)</li>
+          <li>This UI: a single Lambda + lit-html, behind a Function URL</li>
+        </ul>
+
+        <h2>What I want feedback on</h2>
+        <div class="callout">
+          <ul style="margin:0;">
+            <li>Does the universe + liquidity filter look right for someone trading at <em>your</em> size?</li>
+            <li>Are the modelled costs (15/25 bps) sane for the broker / venue you'd actually use?</li>
+            <li>Anything in the daily BUY/SELL list that looks obviously wrong, illiquid, or untradeable in practice?</li>
+            <li>Is the 5-day rebalance the right turnover budget, or would you push it longer?</li>
+            <li>Anything about the methodology that would stop <em>you</em> personally from putting real money through this?</li>
+          </ul>
+        </div>
+        <p style="color:var(--muted);font-size:12px;margin-top:24px;">If you have feedback, the "Email feedback" button at the top opens a draft with this URL pre-filled. Reply with whatever you've got — even a one-liner.</p>
+      </div>
+    </main>`;
+}
+
+function pageView() {
+  let body;
+  if (state.tab === "methodology") body = methodologyView();
+  else if (state.tab === "explorer") body = explorerView();
+  else body = dashboardView();
+  return html`${pageHeader()}${body}`;
+}
+
+function draw() {
+  render(pageView(), document.getElementById("app"));
+  // Plotly redraws have to happen after the DOM is in place
+  if (state.tab === "explorer") {
+    drawExplorerChart();
+    drawAttributionChart();
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Explorer tab — symbol picker + Plotly OHLC + decision dots + score sub-axis
+// ---------------------------------------------------------------------------
+
+const RANGE_PRESETS = {
+  "1M": 30, "6M": 182, "1Y": 365,
+  "5Y": 365 * 5, "15Y": 365 * 15, "MAX": null,
+};
+
+async function loadSymbolsIfNeeded() {
+  if (state.symbols !== null || state.symbolsLoading) return;
+  state.symbolsLoading = true;
+  draw();
+  try {
+    state.symbols = await api("/api/analytics/symbols");
+    if (!state.selectedSymbol && state.symbols.length) {
+      // Default to a recognisable index leader if present, else first symbol
+      const preferred = ["INFY", "TCS", "RELIANCE", "HDFCBANK"]
+        .find(p => state.symbols.some(s => s.symbol === p));
+      state.selectedSymbol = preferred || state.symbols[0].symbol;
+      loadSeries();
+      loadAttribution();
+    }
+  } catch (e) {
+    state.error = `symbols: ${e.message}`;
+  } finally {
+    state.symbolsLoading = false;
+    draw();
+  }
+}
+
+function rangeToDates(rangeKey, lastDate) {
+  if (!lastDate) return [null, null];
+  const end = lastDate;
+  const days = RANGE_PRESETS[rangeKey];
+  if (!days) return [null, end];
+  const endDate = new Date(end + "T00:00:00Z");
+  const startDate = new Date(endDate.getTime() - days * 86400_000);
+  return [startDate.toISOString().slice(0, 10), end];
+}
+
+async function loadSeries() {
+  if (!state.selectedSymbol) return;
+  const meta = state.symbols?.find(s => s.symbol === state.selectedSymbol);
+  const [start, end] = rangeToDates(state.selectedRange, meta?.last_date);
+  state.seriesLoading = true;
+  state.seriesError = null;
+  state.series = null;
+  draw();
+  try {
+    const qs = new URLSearchParams({ symbol: state.selectedSymbol });
+    if (start) qs.set("start", start);
+    if (end)   qs.set("end", end);
+    state.series = await api(`/api/analytics/timeseries?${qs}`);
+  } catch (e) {
+    state.seriesError = e.message;
+  } finally {
+    state.seriesLoading = false;
+    draw();
+  }
+}
+
+async function loadAttribution() {
+  if (!state.selectedSymbol) return;
+  state.attributionLoading = true;
+  state.attributionError = null;
+  state.attribution = null;
+  draw();
+  try {
+    state.attribution = await api(
+      `/api/analytics/attribution?symbol=${encodeURIComponent(state.selectedSymbol)}&top_n=10`
+    );
+  } catch (e) {
+    state.attributionError = e.message;
+  } finally {
+    state.attributionLoading = false;
+    draw();
+  }
+}
+
+function selectSymbol(sym) {
+  state.selectedSymbol = sym;
+  loadSeries();
+  loadAttribution();
+}
+
+function selectRange(r) {
+  state.selectedRange = r;
+  loadSeries();
+}
+
+function decisionDotsForSymbol(symbol) {
+  // Pull BUY/SELL events for `symbol` out of the recent decisions list so we
+  // can overlay them as dots on the price chart.
+  const buys = [], sells = [];
+  for (const d of state.decisions || []) {
+    const date = d.as_of || d.date;
+    if (!date) continue;
+    if (d.actions?.BUY?.some(a => a.symbol === symbol)) buys.push(date);
+    if (d.actions?.SELL?.some(a => a.symbol === symbol)) sells.push(date);
+  }
+  return { buys, sells };
+}
+
+function positionForSymbol(symbol) {
+  return (state.portfolio || []).find(p => p.symbol === symbol) || null;
+}
+
+function drawAttributionChart() {
+  const el = document.getElementById("attribution-chart");
+  if (!el || typeof Plotly === "undefined") return;
+  const a = state.attribution;
+  if (!a || !a.top_contributors || a.error) {
+    Plotly.purge(el);
+    return;
+  }
+  // Reverse so the largest contribution sits at the top of the bar chart
+  const items = [...a.top_contributors].reverse();
+  const xs = items.map(c => c.contribution);
+  const ys = items.map(c => c.feature);
+  const colors = xs.map(v => v >= 0 ? "#6ee7b7" : "#fca5a5");
+  const text = items.map(c => `value: ${c.value == null ? "—" : Number(c.value).toFixed(3)}`);
+  const trace = {
+    type: "bar", orientation: "h",
+    x: xs, y: ys, text, textposition: "auto",
+    marker: { color: colors },
+    hovertemplate: "%{y}<br>contribution %{x:+.4f}<br>%{text}<extra></extra>",
+  };
+  const layout = {
+    paper_bgcolor: "#0c1418", plot_bgcolor: "#0c1418",
+    font: { color: "#e2e8f0", family: "ui-sans-serif, system-ui" },
+    margin: { l: 90, r: 30, t: 10, b: 30 },
+    xaxis: { gridcolor: "#1f2937", zerolinecolor: "#475569", title: "SHAP contribution to score" },
+    yaxis: { gridcolor: "#1f2937", automargin: true },
+    height: Math.max(220, items.length * 28 + 60),
+  };
+  Plotly.react(el, [trace], layout, { displayModeBar: false, responsive: true });
+}
+
+function drawExplorerChart() {
+  const el = document.getElementById("explorer-chart");
+  if (!el || typeof Plotly === "undefined") return;
+  if (!state.series || state.series.n_bars === 0) {
+    Plotly.purge(el);
+    return;
+  }
+  const rows = state.series.rows;
+  const dates = rows.map(r => r.date);
+  const closes = rows.map(r => r.close);
+  const highs = rows.map(r => r.high);
+  const lows = rows.map(r => r.low);
+  const opens = rows.map(r => r.open);
+  const volumes = rows.map(r => r.volume);
+  const scores = rows.map(r => r.score);
+
+  // Decision dots — only the dates that fall inside our visible window
+  const visibleDates = new Set(dates);
+  const { buys, sells } = decisionDotsForSymbol(state.selectedSymbol);
+  const dotPriceFor = (d) => {
+    const i = dates.indexOf(d);
+    return i >= 0 ? closes[i] : null;
+  };
+  const buyTrace = {
+    x: buys.filter(d => visibleDates.has(d)),
+    y: buys.filter(d => visibleDates.has(d)).map(dotPriceFor),
+    mode: "markers", type: "scatter", name: "BUY signal",
+    marker: { color: "#6ee7b7", size: 11, symbol: "triangle-up", line: { color: "#0c1418", width: 1 } },
+    yaxis: "y1", hovertemplate: "BUY %{x}<br>close ₹%{y:.2f}<extra></extra>",
+  };
+  const sellTrace = {
+    x: sells.filter(d => visibleDates.has(d)),
+    y: sells.filter(d => visibleDates.has(d)).map(dotPriceFor),
+    mode: "markers", type: "scatter", name: "SELL signal",
+    marker: { color: "#fca5a5", size: 11, symbol: "triangle-down", line: { color: "#0c1418", width: 1 } },
+    yaxis: "y1", hovertemplate: "SELL %{x}<br>close ₹%{y:.2f}<extra></extra>",
+  };
+
+  const traces = [
+    {
+      x: dates, open: opens, high: highs, low: lows, close: closes,
+      type: "candlestick", name: "OHLC",
+      increasing: { line: { color: "#6ee7b7" } },
+      decreasing: { line: { color: "#fca5a5" } },
+      yaxis: "y1", showlegend: false,
+    },
+    buyTrace, sellTrace,
+    {
+      x: dates, y: volumes, type: "bar", name: "Volume",
+      marker: { color: "#94a3b8", opacity: 0.4 }, yaxis: "y2", showlegend: false,
+    },
+    {
+      x: dates, y: scores, type: "scatter", mode: "lines", name: "Model score",
+      line: { color: "#fcd34d", width: 1.5 }, yaxis: "y3",
+      connectgaps: false,
+    },
+  ];
+  const layout = {
+    paper_bgcolor: "#0c1418", plot_bgcolor: "#0c1418",
+    font: { color: "#e2e8f0", family: "ui-sans-serif, system-ui" },
+    margin: { l: 60, r: 60, t: 30, b: 40 },
+    xaxis: { rangeslider: { visible: false }, gridcolor: "#1f2937" },
+    yaxis:  { domain: [0.45, 1.0], title: "Price (₹)",  gridcolor: "#1f2937" },
+    yaxis2: { domain: [0.25, 0.42], title: "Volume",     gridcolor: "#1f2937" },
+    yaxis3: { domain: [0.0,  0.22], title: "Score",      gridcolor: "#1f2937", zerolinecolor: "#475569" },
+    legend: { orientation: "h", y: 1.08, x: 0 },
+    height: 620,
+  };
+  Plotly.react(el, traces, layout, { displayModeBar: false, responsive: true });
+}
+
+function attributionCard(sym) {
+  if (!sym) return null;
+  const a = state.attribution;
+  const loading = state.attributionLoading;
+  const err = state.attributionError;
+  const inUniverseError = a && a.error;
+
+  let body;
+  if (loading) {
+    body = html`<div class="empty">Loading model attribution…</div>`;
+  } else if (err) {
+    body = html`<div class="banner-halt">error: ${err}</div>`;
+  } else if (inUniverseError) {
+    body = html`<div class="empty">No attribution available — ${sym} is not in today's BUY/HOLD/SELL universe (only the ~50 names the model scored today have feature snapshots).</div>`;
+  } else if (a && a.top_contributors) {
+    const sign = a.score >= 0 ? "+" : "";
+    body = html`
+      <div style="font-size:12px;color:var(--muted);margin-bottom:8px;">
+        Score for <strong style="color:var(--text);">${a.symbol}</strong> on ${a.as_of}:
+        <strong style="color:${a.score >= 0 ? 'var(--buy)' : 'var(--sell)'};">${sign}${Number(a.score).toFixed(4)}</strong>
+        · bias <span class="num">${Number(a.bias).toFixed(4)}</span>
+        · top ${a.top_contributors.length} of 158 features shown
+      </div>
+      <div id="attribution-chart"></div>
+      <p style="font-size:12px;color:var(--muted);margin-top:10px;">
+        Bars show each feature's <strong>SHAP contribution</strong> to today's score —
+        green pushes the model toward BUY, red pushes toward SELL.
+        Feature codes come from Qlib's Alpha158 set (e.g. <code>STD60</code> = 60-day return std,
+        <code>SUMD60</code> = 60-day sum of negative returns, <code>RSV5</code> = 5-day raw stochastic value).
+      </p>
+    `;
+  } else {
+    body = html`<div class="empty">Pick a symbol to see why the model rates it where it does.</div>`;
+  }
+
+  return html`
+    <div class="card">
+      <h2>Why the model rates ${sym} this way today</h2>
+      ${body}
+    </div>
+  `;
+}
+
+function explorerView() {
+  if (state.symbolsLoading && !state.symbols) {
+    return html`<main><div class="card"><h2>Symbol Explorer</h2><div class="empty">Loading symbol list…</div></div></main>`;
+  }
+  const sym = state.selectedSymbol;
+  const meta = state.symbols?.find(s => s.symbol === sym);
+  const pos = sym ? positionForSymbol(sym) : null;
+  const dots = sym ? decisionDotsForSymbol(sym) : { buys: [], sells: [] };
+
+  return html`
+    <main>
+      <div class="card">
+        <h2>Symbol Explorer</h2>
+        <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;">
+          <label style="font-size:12px;color:var(--muted);">Symbol</label>
+          <input list="symbol-list" value=${sym || ""}
+                 @change=${(e) => selectSymbol(e.target.value.toUpperCase().trim())}
+                 placeholder="Type a ticker e.g. INFY"
+                 style="background:var(--panel-2);color:var(--text);border:1px solid var(--border);padding:6px 10px;border-radius:6px;font-family:inherit;min-width:160px;" />
+          <datalist id="symbol-list">
+            ${(state.symbols || []).map(s => html`<option value=${s.symbol}></option>`)}
+          </datalist>
+          <span style="color:var(--muted);font-size:12px;">${(state.symbols || []).length} symbols available</span>
+          <span style="margin-left:auto;display:flex;gap:6px;">
+            ${Object.keys(RANGE_PRESETS).map(r => html`
+              <button class="tab ${state.selectedRange === r ? "active" : ""}"
+                      style="padding:4px 10px;font-size:12px;"
+                      @click=${() => selectRange(r)}>${r}</button>
+            `)}
+          </span>
+        </div>
+        ${meta ? html`
+          <div style="margin-top:10px;font-size:12px;color:var(--muted);">
+            ${sym} — ${meta.n_bars.toLocaleString()} bars from ${meta.first_date} to ${meta.last_date}
+            · BUY signals visible: <strong style="color:var(--buy);">${dots.buys.length}</strong>
+            · SELL signals visible: <strong style="color:var(--sell);">${dots.sells.length}</strong>
+          </div>
+        ` : null}
+        ${state.seriesError ? html`<div class="banner-halt" style="margin-top:10px;">error: ${state.seriesError}</div>` : null}
+        ${state.seriesLoading ? html`<div class="empty" style="margin-top:10px;">Loading time series…</div>` : null}
+        <div id="explorer-chart" style="margin-top:14px;"></div>
+      </div>
+
+      ${attributionCard(sym)}
+
+      ${pos ? html`
+        <div class="card">
+          <h2>Current Position</h2>
+          <table>
+            <tbody>
+              <tr><td>Shares held</td><td class="num">${Number(pos.shares).toLocaleString("en-IN")}</td></tr>
+              <tr><td>Average price</td><td class="num">₹${Number(pos.avg_price).toFixed(2)}</td></tr>
+              <tr><td>Last marked price</td><td class="num">₹${pos.last_price ? Number(pos.last_price).toFixed(2) : "—"}</td></tr>
+              <tr><td>Position value</td><td class="num">₹${pos.position_value ? Number(pos.position_value).toLocaleString("en-IN") : "—"}</td></tr>
+              <tr><td>Unrealised P&amp;L</td><td class="num" style="color:${Number(pos.unrealized_pnl) >= 0 ? 'var(--buy)' : 'var(--sell)'};">₹${pos.unrealized_pnl ? Number(pos.unrealized_pnl).toLocaleString("en-IN") : "—"}</td></tr>
+              <tr><td>Bought on</td><td class="num">${pos.bought_on || "—"}</td></tr>
+            </tbody>
+          </table>
+        </div>
+      ` : null}
+
+      <div class="card doc">
+        <h2>How to read this</h2>
+        <p><strong>Candles</strong> are daily OHLC. Green candles closed above their open; red closed below.</p>
+        <p><strong>Triangles</strong> mark dates the model emitted a real BUY (▲) or SELL (▼) decision for this name in the last ~30 trading days. Long-history charts will only show the recent few — the system has only been live for a handful of sessions.</p>
+        <p><strong>Score line</strong> (yellow) is the model's walk-forward prediction for this name on each day, on a relative scale. Spikes upward = "model loved it." Note: scores only exist from 2024-01-01 onwards (the walk-forward backtest period); pre-2024 will be blank. The most recent trading day's score will also be blank — today's score isn't computed until tomorrow's morning cron lands, so the rightmost candle is always one day ahead of the score line.</p>
+        <p><strong>Volume bars</strong> are raw shares traded; the OHLCV chart uses split-adjusted prices but raw volume — high pre-split volumes reflect a different share count.</p>
+      </div>
+    </main>
+  `;
+}
+
+draw();
+refresh();
+if (state.tab === "explorer") loadSymbolsIfNeeded();
+</script>
+</body>
+</html>

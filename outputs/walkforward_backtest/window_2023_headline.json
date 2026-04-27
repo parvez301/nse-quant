@@ -1,0 +1,48 @@
+{
+  "signal": {
+    "ic_mean": 0.09614349625900917,
+    "ic_ir": 0.9932488988423965,
+    "rank_ic_mean": 0.056291873834564236,
+    "rank_ic_ir": 0.9461783754631613
+  },
+  "strategy_post_cost": {
+    "mean": 0.003823722251210774,
+    "std": 0.010768593176409345,
+    "annualized_return": 0.9100458957881642,
+    "information_ratio": 5.477922032986915,
+    "max_drawdown": -0.06185227277765002
+  },
+  "excess_post_cost": {
+    "mean": 0.0030592921953978597,
+    "std": 0.009711780213969222,
+    "annualized_return": 0.7281115425046906,
+    "information_ratio": 4.859712664563665,
+    "max_drawdown": -0.043536058682994205
+  },
+  "config": {
+    "provider_uri": "~/.qlib/qlib_data/in_data",
+    "region": "cn",
+    "benchmark": "NIFTY50",
+    "train": [
+      "2008-01-01",
+      "2021-12-31"
+    ],
+    "valid": [
+      "2022-01-01",
+      "2022-12-31"
+    ],
+    "test": [
+      "2023-01-01",
+      "2023-12-31"
+    ],
+    "rebalance": 5,
+    "topk": 30,
+    "n_drop": 5,
+    "capital": 1000000,
+    "open_cost": 0.0015,
+    "close_cost": 0.0025,
+    "min_cost": 5.0,
+    "limit_threshold": 0.095,
+    "out_dir": "outputs/walkforward_backtest/window_2023"
+  }
+}

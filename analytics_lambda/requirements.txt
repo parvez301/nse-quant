@@ -1,0 +1,6 @@
+# Listed for documentation only — actual install is driven by the CDK
+# bundling step in infra/nse_quant_stack.py, which uses --no-deps for
+# lightgbm to skip scipy (we only use dense `predict`, never sparse).
+pyarrow==18.1.0
+lightgbm==4.5.0
+numpy==2.1.3

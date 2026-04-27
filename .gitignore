@@ -1,0 +1,84 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.venv/
+venv/
+.eggs/
+*.egg-info/
+
+# Editor / OS
+.vscode/
+.idea/
+.DS_Store
+
+# Qlib runtime caches (not the production data — that's in data/qlib_data/)
+.qlib/
+
+# Logs and runtime junk
+*.log
+outputs/daily.log
+outputs/alerts.log
+outputs/walkforward_backtest.log
+
+# Large rebuildable artifacts — re-run scripts to regenerate
+outputs/walkforward_backtest/window_*/
+outputs/processed_datasets/
+
+# HALT flag is runtime state, not source
+outputs/HALT
+
+# Generated decision PNGs
+outputs/*.png
+
+# Price data — too large for git, regenerate with:
+#   python examples/nse_data_loader.py --start 2005-01-01
+data/qlib_data/
+
+# CDK build output — multi-GB, rebuildable, leaks AWS account artefacts.
+# Regenerate with `make synth` or `make deploy`.
+infra/cdk.out/
+infra/.venv/
+infra/node_modules/
+
+# Analytics parquet — regenerable from outputs/decisions and data/qlib_data
+# via `examples/nse_export_analytics.py` and `examples/nse_export_features_today.py`
+outputs/analytics/
+
+# Local bundle test scratch
+.bundle-fresh/
+.bundle-test/
+
+# direnv local overrides
+.envrc.local
+
+# CDK context cache — has account-specific VPC + zone IDs; regenerated on synth
+infra/cdk.context.json
+
+# Paper-trade state — colleagues should start fresh, not seeded with someone
+# else's portfolio. The runtime regenerates these on first `paper_trade execute`.
+outputs/decisions/
+outputs/current_portfolio.csv
+outputs/paper_equity.csv
+outputs/trade_log.csv
+outputs/last_run.json
+outputs/cost_sensitivity.json
+outputs/outage_monte_carlo.json
+outputs/stratified_stats.json
+outputs/survivorship_estimate.json
+outputs/slippage_smoke_test.json
+outputs/pit_universe.parquet
+outputs/summary.csv
+outputs/summary.txt
+
+# Keep these committed:
+#   examples/*.py        production code
+#   examples/*.sh        cron entry points
+#   outputs/nse_baseline_750_long/    (model weights, ~6MB)
+#   outputs/pit_universe.parquet      (survivorship cache)
+#   outputs/decisions/*.txt           (audit trail of daily picks)
+#   outputs/current_portfolio.csv     (paper portfolio state)
+#   outputs/paper_equity.csv          (equity history)
+#   outputs/trade_log.csv             (trade audit)
+#   outputs/summary.csv,summary.txt   (walkforward summary, no per-window dirs)

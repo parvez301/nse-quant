@@ -1,0 +1,8 @@
+.venv/
+node_modules/
+package.json
+package-lock.json
+cdk.out/
+cdk.context.json
+__pycache__/
+*.pyc

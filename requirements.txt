@@ -1,0 +1,16 @@
+# Core quant stack
+pyqlib>=0.9.5             # Microsoft Qlib (Alpha158, LightGBM ranker, backtester)
+lightgbm>=4.0.0           # gradient-boosted ranker
+pandas>=2.0
+numpy>=1.24,<2.0          # qlib not yet compatible with numpy 2.x
+pyarrow>=15.0             # parquet I/O for pit_universe + kronos features
+scipy>=1.10
+scikit-learn>=1.3
+
+# Data ingestion
+yfinance>=0.2.40          # NSE/BSE historical OHLCV
+requests>=2.31
+
+# Optional but useful
+matplotlib>=3.7           # plot ic curves, equity, drawdowns
+tqdm>=4.65
