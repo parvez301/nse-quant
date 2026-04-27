@@ -127,6 +127,26 @@ echo "[$TS] exporting analytics parquet..." | tee -a "$LOG"
 echo "[$TS] exporting today's features + booster..." | tee -a "$LOG"
 "$PYTHON" examples/nse_export_features_today.py 2>&1 | tee -a "$LOG" | grep -E "^\[features\]" || true
 
+# ---------------------------------------------------------------------------
+# Step 9: Kite token health probe (non-blocking, advisory only)
+# Exits 0 if no token is configured (e.g., fresh deploy), 2 if the token is
+# expired / rejected — alerts the user via the existing notify pipeline so
+# we know to re-run /kite-login before the token-dependent shadow execution
+# layer runs (Tier 1).
+# ---------------------------------------------------------------------------
+echo "[$TS] kite token health probe..." | tee -a "$LOG"
+"$PYTHON" examples/nse_kite_check.py --skip-if-missing >/dev/null 2>&1
+kiteRc=$?
+if [ "$kiteRc" -eq 0 ]; then
+    echo "[$TS] kite token healthy (or not configured — skipped)" | tee -a "$LOG"
+elif [ "$kiteRc" -eq 2 ]; then
+    echo "[$TS] ⚠ kite token rejected — log in via /kite-login" | tee -a "$LOG"
+    "$PYTHON" examples/nse_safety.py notify \
+        "Kite token expired or rejected — visit /kite-login to refresh. Read-only checks paused until then." || true
+else
+    echo "[$TS] ⚠ kite check exited rc=$kiteRc (unexpected)" | tee -a "$LOG"
+fi
+
 TS_END=$(date +"%Y-%m-%d %H:%M:%S")
 echo "[$TS_END] daily run done" | tee -a "$LOG"
 
