@@ -136,6 +136,14 @@ echo "[$TS] exporting today's features + booster..." | tee -a "$LOG"
 "$PYTHON" examples/nse_export_features_today.py 2>&1 | tee -a "$LOG" | grep -E "^\[features\]" || true
 
 # ---------------------------------------------------------------------------
+# Step 8.5: Kite margin + holdings reconciliation (Tier 2). Read-only;
+# writes outputs/kite_reconcile.json. Non-blocking — flags
+# exceeds_margin or kite-only/paper-only holdings for awareness only.
+# ---------------------------------------------------------------------------
+echo "[$TS] kite margin + holdings reconcile..." | tee -a "$LOG"
+"$PYTHON" examples/nse_kite_reconcile.py --skip-if-missing 2>&1 | tee -a "$LOG" | grep -E "^\[reconcile\]" || true
+
+# ---------------------------------------------------------------------------
 # Step 9: Kite token health probe (non-blocking, advisory only)
 # Exits 0 if no token is configured (e.g., fresh deploy), 2 if the token is
 # expired / rejected — alerts the user via the existing notify pipeline so
