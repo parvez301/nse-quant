@@ -294,6 +294,12 @@ def handler(event, context):
             return _resp(200, {"halted": False, "reason": None})
         return _resp(200, {"halted": True, "reason": raw.decode("utf-8").strip()})
 
+    if path == "/api/paper_trade_clock":
+        raw = _get_object("outputs/paper_trade_progress.json")
+        if raw is None:
+            return _resp(200, {"never_run": True})
+        return _resp(200, json.loads(raw))
+
     if path == "/api/alerts":
         raw = _get_object("outputs/alerts.log")
         if raw is None:

@@ -136,6 +136,13 @@ echo "[$TS] exporting today's features + booster..." | tee -a "$LOG"
 "$PYTHON" examples/nse_export_features_today.py 2>&1 | tee -a "$LOG" | grep -E "^\[features\]" || true
 
 # ---------------------------------------------------------------------------
+# Step 8.7: 90-day paper-trade clock. Counts consecutive clean days and
+# resets on breach. Output read by the UI via /api/paper_trade_clock.
+# ---------------------------------------------------------------------------
+echo "[$TS] paper-trade clock..." | tee -a "$LOG"
+"$PYTHON" examples/nse_paper_trade_clock.py 2>&1 | tee -a "$LOG" | grep -E "^\[clock\]" || true
+
+# ---------------------------------------------------------------------------
 # Step 8.6: Live IC snapshot — score vs Kite-quoted return-since-decision
 # (Tier 3). Cheap enough to run daily; signal is most useful when invoked
 # AFTER market close (15:30 IST) since the cron's 08:00 IST timing means

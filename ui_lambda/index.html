@@ -138,6 +138,7 @@ let state = {
   portfolio: [],
   equity: [],
   alerts: [],
+  paperTradeClock: null,    // {consecutive_clean_days, target_days, ...}
   // Explorer state
   symbols: null,           // [{symbol, first_date, last_date, n_bars}]
   symbolsLoading: false,
@@ -175,7 +176,8 @@ async function refresh() {
   draw();
   try {
     const [lastRun, halt, decisions, portfolio, equity, alerts,
-           stratified, costSensitivity, survivorship, outage] = await Promise.all([
+           stratified, costSensitivity, survivorship, outage,
+           paperTradeClock] = await Promise.all([
       api("/api/last_run"),
       api("/api/halt"),
       api("/api/decisions"),
@@ -186,10 +188,11 @@ async function refresh() {
       api("/api/cost_sensitivity").catch(() => ({})),
       api("/api/survivorship").catch(() => ({})),
       api("/api/outage").catch(() => ({})),
+      api("/api/paper_trade_clock").catch(() => null),
     ]);
     Object.assign(state, {
       lastRun, halt, decisions, portfolio, equity, alerts: alerts.lines,
-      stratified, costSensitivity, survivorship, outage,
+      stratified, costSensitivity, survivorship, outage, paperTradeClock,
     });
   } catch (e) {
     state.error = e.message;
@@ -423,6 +426,35 @@ function pageHeader() {
     </header>`;
 }
 
+function paperTradeClockCard() {
+  const c = state.paperTradeClock;
+  if (!c || c.never_run) return html`<div class="empty">Clock not yet computed.</div>`;
+  const n = c.consecutive_clean_days || 0;
+  const target = c.target_days || 90;
+  const pct = Math.min(100, (n / target) * 100);
+  const stateColor = c.current_state === "dirty" ? "var(--sell)"
+    : (n >= target ? "var(--buy)" : "var(--hold)");
+  const stateLabel = c.current_state === "dirty" ? "🔴 day reset"
+    : (n >= target ? "✅ target reached" : "🟡 in progress");
+  const lastReset = c.last_reset_date
+    ? html`<div class="equity-row"><span class="k">Last reset</span><span>${c.last_reset_date}</span></div>
+           <div class="equity-row"><span class="k">Reason</span><span style="font-size:11px;color:var(--muted);max-width:60%;text-align:right;">${c.last_reset_reason || "—"}</span></div>`
+    : html`<div class="equity-row"><span class="k">Last reset</span><span style="color:var(--buy);">never — clean from day 1</span></div>`;
+  return html`
+    <div style="display:flex;align-items:baseline;gap:12px;margin-bottom:8px;">
+      <div style="font-size:30px;font-weight:600;color:${stateColor};">${n}</div>
+      <div style="color:var(--muted);font-size:12px;">of ${target} days · ${stateLabel}</div>
+    </div>
+    <div style="background:rgba(255,255,255,0.05);height:6px;border-radius:3px;overflow:hidden;margin-bottom:12px;">
+      <div style="background:${stateColor};height:100%;width:${pct}%;transition:width 0.3s;"></div>
+    </div>
+    <div class="equity-row"><span class="k">Streak started</span><span>${c.clean_streak_started || "—"}</span></div>
+    ${lastReset}
+    <div class="equity-row"><span class="k">Daily-loss limit</span><span>${fmtPct(c.thresholds.daily_loss_limit_pct / 100)}</span></div>
+    <div class="equity-row"><span class="k">Drawdown limit</span><span>${fmtPct(c.thresholds.drawdown_limit_pct / 100)}</span></div>
+  `;
+}
+
 function dashboardView() {
   return html`
     <main>
@@ -430,6 +462,9 @@ function dashboardView() {
       <div class="grid">
         <div class="card"><h2>Last Run</h2>${lastRunCard()}</div>
         <div class="card"><h2>Paper P&L</h2>${equitySummary()}</div>
+      </div>
+      <div class="grid">
+        <div class="card"><h2>90-Day Paper-Trade Clock</h2>${paperTradeClockCard()}</div>
       </div>
       <div class="grid">
         <div class="card"><h2>Today's Actions</h2>${todayActions()}</div>
