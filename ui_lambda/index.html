@@ -757,7 +757,7 @@ function methodologyView() {
 
         <h2 style="color:var(--warn);">Where this can lie to you (read this part)</h2>
         <div class="callout-warn">
-          <p style="margin-top:0;"><strong>Survivorship bias is only half-fixed.</strong> The universe uses each ticker's earliest <code>yfinance</code> bar, which handles IPOs cleanly but <em>misses delisted names entirely</em> — <code>yfinance</code> drops them. A real fix needs paid point-in-time data. Assume the backtest is mildly optimistic.</p>
+          <p style="margin-top:0;"><strong>Survivorship bias is partially corrected.</strong> The universe handles IPOs cleanly via <code>yfinance</code>'s earliest-bar dates. For delisted names that <code>yfinance</code> drops entirely (DHFL, RCOM, JET, Kingfisher, Unitech, IL&FS, Videocon, Amtek, Hotel Leela, Moser Baer, …), a curated list of <strong>31 well-documented NSE collapses 2008-2024</strong> is layered on. The implied annualised drag is approximately <strong>+104 bps/yr</strong> on the headline backtest — already published in the live numbers below. The next correction layer (full NSE Bhavcopy archive ingestion, planned) will push this further; the curated 31 are a best-effort lower bound, not a final answer. Assume the published t-stat carries a defensible but non-trivial residual upward bias.</p>
           <p><strong>Two years carry the headline.</strong> 2020 (+178%) and 2021 (+107%) are post-COVID dispersion in Indian small/mid-caps — a regime, not repeatable alpha. Strip them out and the model still wins, but the honest forward expectation is <strong>+8% to +15% excess</strong>, not +30%.</p>
           <p style="margin-bottom:0;"><strong>The portfolio is paper, the strategy is theory.</strong> Things this never models: market impact when trading above the universe's typical turnover, T+1 settlement quirks, broker outages on volatile mornings, lot rounding if you hedge with futures, and the fact that your real-world costs almost certainly aren't 15/25 bps.</p>
         </div>
@@ -767,10 +767,11 @@ function methodologyView() {
 
         <h3 style="color:var(--warn);">1. Closing the survivorship gap</h3>
         <ul>
-          <li><span class="status next">PLANNED</span> Pull the <strong>NSE Bhavcopy archive</strong> (free, daily zip files going back to ~1995). It contains <em>every</em> stock that traded that day — including names since delisted. Stitch into the qlib data store, rerun walk-forward. This is the real fix.</li>
+          <li><span class="status done">DONE</span> Curated <strong>31 NSE collapses 2008-2024</strong> with peak-to-exit returns — DHFL, RCOM, JET, Kingfisher, Unitech, Amtek, Videocon, IL&FS Engineering, Hotel Leela, Moser Baer, Coffee Day, Jaypee Infratech, CG Power and others. Layered into the survivorship estimate; current implied drag <strong>≈+104 bps/yr</strong>. Source list is in <code>data/known_delisted_nse.json</code> and is reviewable / extensible.</li>
+          <li><span class="status now">IN PROGRESS</span> <code>NSEBhavcopyAdapter</code> shell shipped in <code>examples/nse_pit_external_data.py</code> — operates on a local cache of NSE daily Bhavcopy CSVs. Cache population is the next phase (NSE rate-limits programmatic access, ~5,500 files across two format eras spanning 2008-2024).</li>
+          <li><span class="status next">PLANNED</span> Pull the full <strong>NSE Bhavcopy archive</strong> (free, daily zip files going back to ~1995). It contains <em>every</em> stock that traded that day — including names since delisted. Stitch into the qlib data store, rerun walk-forward. This is the real fix and replaces the curated list above.</li>
           <li><span class="status next">PLANNED</span> Cross-reference NSE's published <strong>delisted securities list</strong> as a sanity check on the Bhavcopy reconstruction.</li>
-          <li><span class="status done">DONE</span> Computed and published a <strong>survivorship penalty estimate</strong> — see the live numbers below. Lower-bound only because <code>yfinance</code> drops fully-delisted names; the true penalty is likely 1.5–3× higher than the visible exit rate suggests.</li>
-          <li><span class="status hard">HARD</span> Paid PIT data (Bloomberg / Refinitiv / Sentinel). $2k+/month. Overkill for personal scale; revisit only if we ever go institutional.</li>
+          <li><span class="status hard">HARD</span> Paid PIT data (Bloomberg / Refinitiv / EOD Historical Data). $30+/month for the cheapest. Overkill for personal scale; revisit only if we ever go institutional.</li>
         </ul>
         ${liveSurvivorship()}
 

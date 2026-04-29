@@ -126,9 +126,121 @@ class EODHistoricalDataAdapter:
         return self._fetch_delisted(start_year, end_year)
 
 
+class NSEBhavcopyAdapter:
+    """NSE daily Bhavcopy archive — free PIT data including delisted symbols.
+
+    The NSE archive at https://nsearchives.nseindia.com publishes a daily
+    "Bhavcopy" (cm{DDMMMYYY}bhav.csv.zip up to mid-2024, BhavCopy_NSE_CM_*.csv.zip
+    after) that lists every cash-segment symbol that traded that day —
+    crucially including names since delisted, which yfinance silently drops.
+
+    Consuming the archive is its own multi-day project: NSE actively
+    rate-limits / blocks programmatic access, the format changed mid-2024,
+    ISIN/symbol changes from corporate actions need stitching, and ~5,500
+    daily files cover the 21-year window. This adapter is therefore
+    structured around a LOCAL CACHE that some upstream step populates,
+    rather than fetching directly from NSE on every call.
+
+    Cache layout expected:
+
+        data/bhavcopy/
+            2008/
+                cm01JAN2008bhav.csv     # extracted CSV, one per trading day
+                ...
+            ...
+            2024/
+                BhavCopy_NSE_CM_0_0_0_20241231_F_0000.csv
+
+    Once the cache is populated (separate phase), this adapter walks the
+    files, computes per-ticker (first_date, last_date), and returns the set
+    of symbols that traded but stopped appearing before the end of the
+    requested year window — i.e. delisted candidates.
+
+    Until the cache exists, `is_available` returns False and
+    `list_delisted_tickers` returns []. The caller is expected to fall
+    back to the curated `data/known_delisted_nse.json` layer (which is
+    what nse_survivorship_estimate.py --include-known-delisted does).
+
+    To populate the cache later (planned, separate session):
+
+        # 1. Use jugaad-data or a manually-pulled archive zip
+        pip install jugaad-data
+        python -m jugaad_data.bhavcopy --from 2008-01-01 --to 2024-12-31 \\
+            --out data/bhavcopy/
+
+        # 2. Build the corrected delisted list
+        python examples/nse_pit_external_data.py list-delisted \\
+            --provider nse-bhavcopy --start-year 2008 --end-year 2024 \\
+            --out outputs/external_delisted_tickers.json
+    """
+    name = "nse-bhavcopy"
+    DEFAULT_CACHE = Path("data/bhavcopy")
+
+    def __init__(self, cache_dir: str | Path | None = None):
+        self.cache_dir = Path(cache_dir or self.DEFAULT_CACHE)
+
+    def is_available(self) -> bool:
+        # Available iff the cache directory exists AND has at least one
+        # year-subdirectory with at least one CSV file inside. We don't
+        # require all 21 years — partial coverage is still useful.
+        if not self.cache_dir.is_dir():
+            return False
+        for year_dir in self.cache_dir.iterdir():
+            if not year_dir.is_dir():
+                continue
+            for f in year_dir.iterdir():
+                if f.suffix.lower() == ".csv":
+                    return True
+        return False
+
+    def _iter_cache_files(self, start_year: int, end_year: int):
+        """Yield (year, csv_path) for every cached Bhavcopy CSV in the
+        requested year window. Pure walker — no NSE network access."""
+        for year_dir in sorted(self.cache_dir.iterdir() if self.cache_dir.is_dir() else []):
+            try:
+                year = int(year_dir.name)
+            except (ValueError, AttributeError):
+                continue
+            if not (start_year <= year <= end_year):
+                continue
+            if not year_dir.is_dir():
+                continue
+            for f in sorted(year_dir.iterdir()):
+                if f.suffix.lower() == ".csv":
+                    yield year, f
+
+    def list_delisted_tickers(self, start_year: int, end_year: int) -> list[dict]:
+        if not self.is_available():
+            print(
+                "[nse-bhavcopy] no cached Bhavcopy CSVs found under "
+                f"{self.cache_dir}. The adapter SHELL is shipped; the data "
+                "fetch is a separate phase. Until then, this returns []. "
+                "See module docstring for the planned ingestion workflow.",
+                file=sys.stderr,
+            )
+            return []
+        # Real ingestion lives here. Stubbed today because populating the
+        # cache itself is the multi-day project. Sketch:
+        #   for year, csv_path in self._iter_cache_files(start_year, end_year):
+        #       parse symbol column from each row
+        #       record (symbol -> first_seen_date, last_seen_date)
+        #   delisted = [
+        #       {ticker, first_date, last_date, exit_event="bhavcopy_disappeared"}
+        #       for symbol, (fd, ld) in observed.items()
+        #       if ld < f"{end_year}-12-01"   # stopped trading before window end
+        #   ]
+        raise NotImplementedError(
+            "NSEBhavcopyAdapter is currently shell-only. The data ingestion "
+            "(downloading + parsing ~5,500 daily CSVs across two format eras) "
+            "is a separate phase — see the module docstring. The pure cache "
+            "walker (`_iter_cache_files`) is testable today."
+        )
+
+
 PROVIDERS: dict[str, type] = {
     "no-op": NoOpAdapter,
     "eod-historical": EODHistoricalDataAdapter,
+    "nse-bhavcopy": NSEBhavcopyAdapter,
 }
 
 

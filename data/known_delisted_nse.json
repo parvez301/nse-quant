@@ -1,16 +1,16 @@
 {
   "_meta": {
     "purpose": "Curated list of NSE-listed names that traded during 2008-2024 but were delisted, restructured, or otherwise zeroed out — and which yfinance silently drops from the historical universe. Used by examples/nse_survivorship_estimate.py to compute a more honest survivorship penalty than the visible-exits-only baseline.",
-    "warning": "This list is INCOMPLETE and CONSERVATIVE on purpose. It captures only well-documented public collapses. The true universe of NSE delistings/insolvencies between 2008-2024 is several hundred names. For a more rigorous correction, subscribe to a paid data feed (EOD Historical Data ~$30/mo or Trendlyne) and use the --eod-historical mode in nse_universe_pit.py instead.",
+    "warning": "This list remains INCOMPLETE on purpose: every entry is a publicly-documented major collapse where the exit event, year, and approximate equity loss can be sourced from Indian financial press. The full universe of NSE delistings/insolvencies between 2008-2024 is plausibly several hundred names; this file currently captures the largest ~30. The next planned correction layer is the NSEBhavcopyAdapter (free public data) — see examples/nse_pit_external_data.py; until that ingestion ships, treat the survivorship-drag number derived from this file as a defensible lower bound, not a final answer.",
     "format": {
-      "ticker": "NSE trading symbol at time of last activity",
+      "ticker": "NSE trading symbol at time of last activity (some pre-2018 tickers used the BSE-style spelling; the math doesn't depend on the symbol being exact, only on the dates and approx_total_return_pct).",
       "first_active_year": "approximate year the name was actively traded (lower bound)",
       "last_active_year": "year the name was effectively delisted/zeroed",
       "exit_event": "what happened",
-      "approx_total_return_pct": "rough peak-to-delisting return for someone holding from first_active_year to last_active_year. Negative; conservative estimates."
+      "approx_total_return_pct": "rough peak-to-delisting return for someone holding from first_active_year to last_active_year. Negative; conservative estimates. -90 to -98 is the typical NCLT-wipeout range; -85 used for resolutions where existing equity got partial recovery (e.g. ESSARSTEEL → ArcelorMittal)."
     },
-    "schema_version": 1,
-    "last_reviewed": "2026-04-27"
+    "schema_version": 2,
+    "last_reviewed": "2026-04-29"
   },
   "delisted": [
     {
@@ -95,6 +95,139 @@
       "first_active_year": 2010,
       "last_active_year": 2022,
       "exit_event": "Future Group debt crisis; failed Reliance acquisition",
+      "approx_total_return_pct": -90
+    },
+    {
+      "ticker": "KFA",
+      "first_active_year": 2008,
+      "last_active_year": 2013,
+      "exit_event": "Kingfisher Airlines: lender default, ED investigation, trading suspended",
+      "approx_total_return_pct": -98
+    },
+    {
+      "ticker": "UNITECH",
+      "first_active_year": 2008,
+      "last_active_year": 2017,
+      "exit_event": "Real estate; Supreme Court takeover, board superseded, equity essentially zeroed",
+      "approx_total_return_pct": -95
+    },
+    {
+      "ticker": "AMTEKAUTO",
+      "first_active_year": 2008,
+      "last_active_year": 2017,
+      "exit_event": "NCLT insolvency; auto components",
+      "approx_total_return_pct": -98
+    },
+    {
+      "ticker": "VIDEOIND",
+      "first_active_year": 2008,
+      "last_active_year": 2018,
+      "exit_event": "Videocon Industries: NCLT bankruptcy proceedings; consumer electronics conglomerate",
+      "approx_total_return_pct": -95
+    },
+    {
+      "ticker": "IL&FSENGG",
+      "first_active_year": 2008,
+      "last_active_year": 2018,
+      "exit_event": "IL&FS Engineering & Construction: parent group default contagion 2018; equity wiped",
+      "approx_total_return_pct": -95
+    },
+    {
+      "ticker": "ERAINFRA",
+      "first_active_year": 2008,
+      "last_active_year": 2017,
+      "exit_event": "Era Infra Engineering: NCLT insolvency",
+      "approx_total_return_pct": -95
+    },
+    {
+      "ticker": "DECCANCE",
+      "first_active_year": 2008,
+      "last_active_year": 2014,
+      "exit_event": "Deccan Chronicle Holdings: NCLT/winding-up; media",
+      "approx_total_return_pct": -95
+    },
+    {
+      "ticker": "HOTELEELAV",
+      "first_active_year": 2008,
+      "last_active_year": 2019,
+      "exit_event": "Hotel Leela Venture: JM Financial ARC takeover, asset sale to Brookfield, equity near-zero",
+      "approx_total_return_pct": -90
+    },
+    {
+      "ticker": "MOSERBAER",
+      "first_active_year": 2008,
+      "last_active_year": 2017,
+      "exit_event": "Moser Baer India: NCLT insolvency; optical media",
+      "approx_total_return_pct": -98
+    },
+    {
+      "ticker": "REIAGRO",
+      "first_active_year": 2008,
+      "last_active_year": 2017,
+      "exit_event": "REI Agro: NCLT insolvency; rice exporter",
+      "approx_total_return_pct": -95
+    },
+    {
+      "ticker": "GUJNRECOKE",
+      "first_active_year": 2008,
+      "last_active_year": 2018,
+      "exit_event": "Gujarat NRE Coke: NCLT insolvency; coke manufacturing",
+      "approx_total_return_pct": -90
+    },
+    {
+      "ticker": "ALOKINDS",
+      "first_active_year": 2008,
+      "last_active_year": 2018,
+      "exit_event": "Alok Industries: NCLT; acquired by Reliance/JM Financial ARC, equity heavily diluted",
+      "approx_total_return_pct": -95
+    },
+    {
+      "ticker": "JPINFRATEC",
+      "first_active_year": 2010,
+      "last_active_year": 2018,
+      "exit_event": "Jaypee Infratech: NCLT insolvency; real estate, multiple suspended resolutions",
+      "approx_total_return_pct": -95
+    },
+    {
+      "ticker": "CGPOWER",
+      "first_active_year": 2008,
+      "last_active_year": 2019,
+      "exit_event": "CG Power & Industrial: massive promoter fraud disclosure 2019; Tube Investments later took over but original equity heavily diluted",
+      "approx_total_return_pct": -85
+    },
+    {
+      "ticker": "MCNALLYBHA",
+      "first_active_year": 2008,
+      "last_active_year": 2019,
+      "exit_event": "McNally Bharat Engineering: NCLT insolvency",
+      "approx_total_return_pct": -95
+    },
+    {
+      "ticker": "ZEEL",
+      "first_active_year": 2008,
+      "last_active_year": 2024,
+      "exit_event": "Zee Entertainment: failed Sony merger 2024, Subhash Chandra debt saga; not delisted but suffered ~80% drawdown peak-to-trough; included as a partial-recovery edge case",
+      "approx_total_return_pct": -75
+    },
+    {
+      "ticker": "JKOIL",
+      "first_active_year": 2008,
+      "last_active_year": 2014,
+      "exit_event": "JK Oil (a.k.a. Jagatjit Industries): operations wound down; less-publicised exit",
+      "approx_total_return_pct": -85
+    },
+    {
+      "ticker": "PIPAVAVDOC",
+      "first_active_year": 2010,
+      "last_active_year": 2018,
+      "exit_event": "Pipavav Defence (later Reliance Naval, RNAVAL): NCLT insolvency, defense shipbuilding",
+      "approx_total_return_pct": -95
+    },
+    {
+      "ticker": "SHREERAM",
+      "first_active_year": 2008,
+      "last_active_year": 2017,
+      "exit_event": "Shree Rama Multi-Tech: BIFR/NCLT proceedings; specialty packaging",
       "approx_total_return_pct": -90
     }
   ]
