@@ -420,12 +420,32 @@ function portfolioCard() {
     (+b.position_value || +b.shares * +b.avg_price || 0) - (+a.position_value || +a.shares * +a.avg_price || 0)
   );
   const hasMarks = rows.some((p) => p.last_price && +p.last_price > 0);
+
+  // Intraday overlay: when toggle ON and Lambda has a fresh snapshot, look up
+  // each position's live last_price from intraday_mtm.json's positions[]
+  // array (keyed by symbol). Only override when the live quote is present
+  // AND the source is "kite_live" (skip the prior_close fallback case so
+  // we don't claim freshness we don't have).
+  const intradayLive =
+    state.showIntraday &&
+    state.intradayMtm &&
+    state.intradayMtm.source === "kite_live" &&
+    !state.intradayMtm.kite_unavailable;
+  const intradayBySym = {};
+  if (intradayLive) {
+    for (const p of state.intradayMtm.positions || []) {
+      if (p.last_price != null) intradayBySym[p.symbol] = p;
+    }
+  }
+
   return html`
     <div class="section-note">
       <strong>Open positions</strong> = the actual paper portfolio held right now, sorted by position size.
-      ${hasMarks
-        ? html`Marks update daily at post-close. P&L is unrealised (mark-to-market vs. avg cost).`
-        : html`Per-position P&L appears once the next mark step writes <code>last_price</code> back to the CSV (Monday 08:00 IST cron).`}
+      ${intradayLive
+        ? html`<span style="color:var(--accent);">Marks updating live every 15 min from Kite</span> (as of ${state.intradayMtm.as_of_ist}). P&L is unrealised intraday vs. avg cost.`
+        : hasMarks
+          ? html`Marks update daily at post-close. P&L is unrealised (mark-to-market vs. avg cost). Toggle live intraday marks on the methodology tab.`
+          : html`Per-position P&L appears once the next mark step writes <code>last_price</code> back to the CSV (Monday 08:00 IST cron).`}
     </div>
     <table>
       <thead><tr>
@@ -437,16 +457,23 @@ function portfolioCard() {
       <tbody>${rows.map((p) => {
         const shares = +p.shares || 0;
         const avg = +p.avg_price || 0;
-        const last = +p.last_price || 0;
-        const value = +p.position_value || (shares * (last || avg));
-        const pnl = +p.unrealized_pnl;
+        const csvLast = +p.last_price || 0;
+        // Intraday override: when live, prefer Kite's last_price for this symbol
+        const intra = intradayBySym[p.symbol];
+        const live = intra && intra.last_price != null ? +intra.last_price : 0;
+        const last = live || csvLast;
+        const isLive = !!live;
+        const value = isLive
+          ? shares * last
+          : (+p.position_value || (shares * (last || avg)));
+        const pnl = isLive ? (last - avg) * shares : +p.unrealized_pnl;
         const pnlPct = avg && last ? (last - avg) / avg : null;
         return html`<tr>
           <td>${p.symbol}</td>
           <td class="num">${fmtNum(shares)}</td>
           <td class="num">₹${fmtNum(avg, 2)}</td>
           ${hasMarks ? html`
-            <td class="num">${last ? '₹' + fmtNum(last, 2) : '—'}</td>
+            <td class="num">${last ? html`₹${fmtNum(last, 2)}${isLive ? html`<span style="color:var(--accent);font-size:10px;margin-left:4px;" title="Live last from Kite">•</span>` : ""}` : '—'}</td>
             <td class="num">${value ? '₹' + fmtNum(value, 0) : '—'}</td>
             <td class="num" style="color:${isNaN(pnl) ? 'var(--muted)' : pnl >= 0 ? 'var(--accent)' : 'var(--warn)'}">
               ${isNaN(pnl) ? '—' : `₹${fmtNum(pnl, 0)} (${pnlPct != null ? fmtPct(pnlPct) : '—'})`}
