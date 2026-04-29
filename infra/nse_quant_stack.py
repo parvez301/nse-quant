@@ -416,6 +416,75 @@ class NseQuantStack(Stack):
         )
 
         # ------------------------------------------------------------------
+        # Intraday MTM Lambda — every 15 min during market hours, pulls
+        # live last-prices from Kite for the paper portfolio and writes
+        # outputs/intraday_mtm.json. Dashboard polls it behind an opt-in
+        # toggle (default OFF — daily kill-switch P&L stays the source of
+        # truth; intraday is informational only).
+        # ------------------------------------------------------------------
+        intradayMtmLogGroup = logs.LogGroup(
+            self,
+            "IntradayMtmLogs",
+            retention=logs.RetentionDays.ONE_MONTH,
+            removal_policy=RemovalPolicy.DESTROY,
+        )
+        intradayMtmLambda = lambda_.Function(
+            self,
+            "IntradayMtm",
+            runtime=lambda_.Runtime.PYTHON_3_11,
+            architecture=lambda_.Architecture.ARM_64,
+            handler="handler.handler",
+            # Bundle kiteconnect via Docker — 'requests' + 'kiteconnect'
+            # are the only runtime deps; everything else is stdlib.
+            code=lambda_.Code.from_asset(
+                str(REPO_ROOT / "intraday_mtm_lambda"),
+                bundling=BundlingOptions(
+                    image=lambda_.Runtime.PYTHON_3_11.bundling_image,
+                    command=[
+                        "bash", "-c",
+                        "set -e; "
+                        "pip install --no-cache-dir "
+                        "kiteconnect==5.0.1 "
+                        "--platform manylinux2014_aarch64 --only-binary=:all: "
+                        "-t /asset-output; "
+                        "cp handler.py /asset-output/",
+                    ],
+                ),
+            ),
+            memory_size=256,
+            timeout=Duration.seconds(20),
+            environment={
+                "STATE_BUCKET": stateBucket.bucket_name,
+                "KITE_SECRET_NAME": kiteSecret.secret_name,
+            },
+            log_group=intradayMtmLogGroup,
+        )
+        stateBucket.grant_read(intradayMtmLambda)
+        stateBucket.grant_put(intradayMtmLambda)
+        kiteSecret.grant_read(intradayMtmLambda)
+
+        # Every 15 min Mon-Fri 03:45-09:45 UTC (= 09:15-15:15 IST), plus
+        # 10:00 UTC (= 15:30 IST close print). Cron syntax: `*/15` over
+        # hours 03-09 gives 24 fires; we add an explicit 10:00 below so
+        # the close print is captured.
+        events.Rule(
+            self,
+            "IntradayMtmSchedule",
+            schedule=events.Schedule.cron(
+                minute="*/15", hour="3-9", week_day="MON-FRI"
+            ),
+            targets=[events_targets.LambdaFunction(intradayMtmLambda)],
+        )
+        events.Rule(
+            self,
+            "IntradayMtmCloseSchedule",
+            schedule=events.Schedule.cron(
+                minute="0", hour="10", week_day="MON-FRI"
+            ),
+            targets=[events_targets.LambdaFunction(intradayMtmLambda)],
+        )
+
+        # ------------------------------------------------------------------
         # Dead-man's-switch Lambda — alerts if cron didn't write last_run.json
         # ------------------------------------------------------------------
         deadManLogGroup = logs.LogGroup(

@@ -71,6 +71,14 @@ outputs/slippage_smoke_test.json
 outputs/pit_universe.parquet
 outputs/summary.csv
 outputs/summary.txt
+# Local re-run artefacts of cron jobs — cron writes these to S3 in prod;
+# locally they leak personal trading state.
+outputs/live_ic.csv
+outputs/shadow_trade_log.csv
+outputs/kite_reconcile.json
+outputs/paper_trade_progress.json
+outputs/pending_settlement.csv
+outputs/intraday_mtm.json
 
 # Keep these committed:
 #   examples/*.py        production code

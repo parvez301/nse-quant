@@ -8,6 +8,7 @@ Routes (Function URL):
   GET /api/equity          -> paper_equity.csv as JSON
   GET /api/halt            -> {halted: bool, reason: str|null}
   GET /api/alerts          -> tail of alerts.log
+  GET /api/intraday_mtm    -> intraday_mtm.json (15-min Lambda refresh)
   GET /kite-login          -> 302 -> Zerodha OAuth login page
   GET /kite-callback       -> exchange ?request_token for an access_token,
                               persist into Secrets Manager, render success page
@@ -296,6 +297,12 @@ def handler(event, context):
 
     if path == "/api/paper_trade_clock":
         raw = _get_object("outputs/paper_trade_progress.json")
+        if raw is None:
+            return _resp(200, {"never_run": True})
+        return _resp(200, json.loads(raw))
+
+    if path == "/api/intraday_mtm":
+        raw = _get_object("outputs/intraday_mtm.json")
         if raw is None:
             return _resp(200, {"never_run": True})
         return _resp(200, json.loads(raw))

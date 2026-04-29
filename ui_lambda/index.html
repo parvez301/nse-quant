@@ -139,6 +139,13 @@ let state = {
   equity: [],
   alerts: [],
   paperTradeClock: null,    // {consecutive_clean_days, target_days, ...}
+  // Intraday MTM (opt-in via methodology toggle).
+  // Default OFF — daily kill-switch P&L is the source of truth; intraday
+  // is informational only and exists to avoid anxiety-watching during the
+  // 90-day paper-trade window.
+  intradayMtm: null,        // {as_of_ist, source, intraday_pnl_pct, ...}
+  showIntraday: localStorage.getItem("nse_show_intraday") === "1",
+  intradayPollHandle: null,
   // Explorer state
   symbols: null,           // [{symbol, first_date, last_date, n_bars}]
   symbolsLoading: false,
@@ -206,12 +213,47 @@ async function refresh() {
       lastRun, halt, decisions, portfolio, equity, alerts: alerts.lines,
       stratified, costSensitivity, survivorship, outage, paperTradeClock,
     });
+    if (state.showIntraday) loadIntradayMtm();
   } catch (e) {
     state.error = e.message;
   } finally {
     state.loading = false;
     draw();
   }
+}
+
+async function loadIntradayMtm() {
+  try {
+    const m = await api("/api/intraday_mtm");
+    state.intradayMtm = m && !m.never_run ? m : null;
+  } catch (e) {
+    state.intradayMtm = null;
+  }
+  draw();
+}
+
+function setIntradayToggle(enabled) {
+  state.showIntraday = enabled;
+  localStorage.setItem("nse_show_intraday", enabled ? "1" : "0");
+  if (state.intradayPollHandle) {
+    clearInterval(state.intradayPollHandle);
+    state.intradayPollHandle = null;
+  }
+  if (enabled) {
+    loadIntradayMtm();
+    // Poll every 60 sec; the Lambda only writes every 15 min so most polls
+    // hit cache. Cheap and keeps the as_of timestamp roughly accurate.
+    state.intradayPollHandle = setInterval(loadIntradayMtm, 60_000);
+  } else {
+    state.intradayMtm = null;
+  }
+  draw();
+}
+
+// On first load, if the toggle is already ON from a prior session, kick off
+// the polling loop.
+if (state.showIntraday) {
+  setIntradayToggle(true);
 }
 
 const fmtNum = (n, d = 0) =>
@@ -266,6 +308,7 @@ function equitySummary() {
 
   return html`
     ${caveat}
+    ${intradayPill()}
     <div class="equity-row"><span class="k">Total equity</span><span>₹${fmtNum(last.total_equity)}</span></div>
     <div class="equity-row"><span class="k">Daily P&L</span>
       <span style="color:${dailyRet >= 0 ? 'var(--accent)' : 'var(--warn)'}">${fmtPct(dailyRet)}</span></div>
@@ -281,6 +324,32 @@ function equitySummary() {
       <span style="color:${dd >= -0.05 ? 'var(--muted)' : 'var(--warn)'}">${fmtPct(dd)}</span></div>
     <div class="equity-row"><span class="k">Positions / Cash</span><span>${last.n_positions} / ₹${fmtNum(last.cash)}</span></div>
   `;
+}
+
+function intradayPill() {
+  if (!state.showIntraday) return "";
+  const m = state.intradayMtm;
+  if (!m) {
+    return html`<div style="background:rgba(96,165,250,0.06);border-left:2px solid var(--muted);padding:6px 10px;margin:0 0 10px 0;font-size:11px;color:var(--muted);border-radius:4px;">
+      Intraday MTM: loading…
+    </div>`;
+  }
+  if (m.kite_unavailable) {
+    return html`<div style="background:rgba(252,211,77,0.08);border-left:2px solid var(--hold);padding:6px 10px;margin:0 0 10px 0;font-size:11px;color:var(--muted);border-radius:4px;">
+      Intraday MTM unavailable — Kite token expired.
+      <a href="/kite-login" style="color:var(--hold);">re-login</a>
+      &nbsp;<span style="opacity:0.6;">(${m.kite_unavailable_reason || ""})</span>
+    </div>`;
+  }
+  const pct = m.intraday_pnl_pct;
+  const color = pct == null ? "var(--muted)" : (pct >= 0 ? "var(--accent)" : "var(--warn)");
+  const sign = pct == null ? "" : (pct >= 0 ? "+" : "");
+  return html`<div style="background:rgba(96,165,250,0.04);border-left:2px solid var(--muted);padding:6px 10px;margin:0 0 10px 0;font-size:11px;color:var(--muted);border-radius:4px;">
+    <strong style="color:${color};">Intraday: ${pct == null ? '—' : `${sign}${pct.toFixed(2)}%`}</strong>
+    &nbsp;·&nbsp; as of ${m.as_of_ist}
+    &nbsp;·&nbsp; ${m.n_priced}/${m.n_positions} priced
+    <span style="opacity:0.7;">&nbsp;— informational only, does not drive the kill switch</span>
+  </div>`;
 }
 
 function todayActions() {
@@ -590,6 +659,28 @@ function methodologyView() {
   return html`
     <main>
       <div class="card doc">
+        <h2>Display preferences</h2>
+        <div style="background:rgba(96,165,250,0.04);border:1px solid rgba(96,165,250,0.15);padding:12px 16px;border-radius:6px;margin-bottom:18px;">
+          <label style="display:flex;align-items:flex-start;gap:10px;cursor:pointer;font-size:13px;">
+            <input type="checkbox"
+                   .checked=${state.showIntraday}
+                   @change=${(e) => setIntradayToggle(e.target.checked)}
+                   style="margin-top:3px;flex-shrink:0;">
+            <span>
+              <strong>Show intraday MTM on the dashboard</strong>
+              <span style="color:var(--muted);font-weight:normal;">&nbsp;(default OFF)</span>
+              <div style="color:var(--muted);font-size:12px;margin-top:4px;line-height:1.5;">
+                Refreshes the paper portfolio's mark-to-market every 15 min during NSE hours
+                using live last-prices from Kite. <strong>Informational only</strong> —
+                the daily kill-switch (which can halt trading on a 5% daily loss or 20% drawdown)
+                runs on the post-close paper-equity curve, never on intraday wiggles.
+                Watching real-time numbers during the 90-day paper-trade window can tempt
+                early intervention; that's why this is opt-in.
+              </div>
+            </span>
+          </label>
+        </div>
+
         <h2>What this is</h2>
         <p>A daily, fully systematic stock-ranking model for the Indian equity market. Every trading day at 08:00 IST, an automated job generates a ranked list of 750+ NSE stocks and emits a small basket of <span class="pill buy">BUY</span> / <span class="pill sell">SELL</span> / <span class="pill hold">HOLD</span> decisions for a paper portfolio. <strong>Nothing here is live-traded.</strong> This dashboard is the audit log.</p>
         <p>The goal is to share the actual day-to-day decisions and equity curve so people I trust can poke holes in the methodology, the costs, and the assumptions — before any real money goes near it.</p>
