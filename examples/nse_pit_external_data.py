@@ -126,6 +126,40 @@ class EODHistoricalDataAdapter:
         return self._fetch_delisted(start_year, end_year)
 
 
+_MONTHS = {
+    "JAN": 1, "FEB": 2, "MAR": 3, "APR": 4, "MAY": 5, "JUN": 6,
+    "JUL": 7, "AUG": 8, "SEP": 9, "OCT": 10, "NOV": 11, "DEC": 12,
+}
+
+
+def _date_from_bhavcopy_filename(name: str) -> str | None:
+    """Old-format `cm02JAN2024bhav.csv` → "2024-01-02".
+    New-format `BhavCopy_NSE_CM_0_0_0_20241231_F_0000.csv` → "2024-12-31".
+    Returns None for anything else."""
+    n = name.upper()
+    # Old format: cmDDMMMYYYYBHAV.CSV
+    if n.startswith("CM") and "BHAV" in n and len(n) >= 17:
+        try:
+            day = int(n[2:4])
+            mon = _MONTHS.get(n[4:7])
+            year = int(n[7:11])
+            if mon is None:
+                return None
+            return f"{year:04d}-{mon:02d}-{day:02d}"
+        except (ValueError, KeyError):
+            return None
+    # New format: BHAVCOPY_NSE_CM_*_YYYYMMDD_F_*.CSV
+    if n.startswith("BHAVCOPY_NSE_CM"):
+        # Find the 8-digit date token.
+        for tok in n.split("_"):
+            if len(tok) == 8 and tok.isdigit():
+                try:
+                    return f"{tok[0:4]}-{tok[4:6]}-{tok[6:8]}"
+                except ValueError:
+                    return None
+    return None
+
+
 class NSEBhavcopyAdapter:
     """NSE daily Bhavcopy archive — free PIT data including delisted symbols.
 
@@ -161,20 +195,41 @@ class NSEBhavcopyAdapter:
     back to the curated `data/known_delisted_nse.json` layer (which is
     what nse_survivorship_estimate.py --include-known-delisted does).
 
-    To populate the cache later (planned, separate session):
+    Populate the cache via the bundled fetcher (uses jugaad-data under
+    the hood for the NSE-side rate-limited download):
 
-        # 1. Use jugaad-data or a manually-pulled archive zip
+        # 1. Install the fetch dep
         pip install jugaad-data
-        python -m jugaad_data.bhavcopy --from 2008-01-01 --to 2024-12-31 \\
-            --out data/bhavcopy/
 
-        # 2. Build the corrected delisted list
+        # 2. Pull a window into data/bhavcopy/YYYY/
+        python examples/nse_bhavcopy_fetch.py \\
+            --start 2024-01-01 --end 2024-12-31
+
+        # 3. Build the delisted-candidates list
         python examples/nse_pit_external_data.py list-delisted \\
-            --provider nse-bhavcopy --start-year 2008 --end-year 2024 \\
+            --provider nse-bhavcopy --start-year 2024 --end-year 2024 \\
             --out outputs/external_delisted_tickers.json
+
+    What "delisted candidate" means in this implementation:
+    A SYMBOL+SERIES pair that appeared in at least one Bhavcopy CSV
+    inside the year window but stopped appearing at least
+    `STALE_BUFFER_DAYS` before the last cached date. This catches true
+    delistings, suspensions, and corporate actions that change the
+    symbol; downstream filtering (e.g. cross-checking against the
+    curated `known_delisted_nse.json` or NSE's official delisted list)
+    is needed to separate true exits from symbol renames.
     """
     name = "nse-bhavcopy"
     DEFAULT_CACHE = Path("data/bhavcopy")
+    # If a symbol stopped appearing this many days before the last
+    # cached Bhavcopy date, treat it as a delisted candidate (vs a
+    # stale-but-still-listed name on a long suspension). 30 days is
+    # conservative enough to suppress holidays and routine T2T moves.
+    STALE_BUFFER_DAYS = 30
+    # Series codes we keep — equity-like only. Skip BE (T2T), BL
+    # (block deal), GC (govt securities), MF (mutual funds), etc.
+    # SM is SME platform; include it because some real exits live there.
+    KEEP_SERIES = {"EQ", "BE", "BZ", "SM"}
 
     def __init__(self, cache_dir: str | Path | None = None):
         self.cache_dir = Path(cache_dir or self.DEFAULT_CACHE)
@@ -209,32 +264,94 @@ class NSEBhavcopyAdapter:
                 if f.suffix.lower() == ".csv":
                     yield year, f
 
+    def _parse_bhavcopy_csv(self, csv_path: Path):
+        """Yield (symbol, series, trade_date_str) for every row of the CSV.
+
+        Tolerates both archive formats. Old format header has spaces:
+        ` SERIES, DATE1, ...`; new (post mid-2024) header is comma-clean.
+        Skips rows whose series isn't in KEEP_SERIES."""
+        import csv as _csv  # noqa: PLC0415
+        with csv_path.open(newline="") as f:
+            reader = _csv.reader(f)
+            try:
+                header = next(reader)
+            except StopIteration:
+                return
+            cols = [c.strip().upper() for c in header]
+            try:
+                ix_sym = cols.index("SYMBOL")
+                ix_ser = cols.index("SERIES")
+                ix_date = cols.index("DATE1") if "DATE1" in cols else cols.index("TRADDY") if "TRADDY" in cols else -1
+            except ValueError:
+                return
+            for row in reader:
+                if not row or len(row) <= max(ix_sym, ix_ser):
+                    continue
+                series = row[ix_ser].strip().upper()
+                if series not in self.KEEP_SERIES:
+                    continue
+                sym = row[ix_sym].strip().upper()
+                if not sym:
+                    continue
+                date_str = row[ix_date].strip() if ix_date >= 0 and ix_date < len(row) else ""
+                yield sym, series, date_str
+
     def list_delisted_tickers(self, start_year: int, end_year: int) -> list[dict]:
         if not self.is_available():
             print(
                 "[nse-bhavcopy] no cached Bhavcopy CSVs found under "
-                f"{self.cache_dir}. The adapter SHELL is shipped; the data "
-                "fetch is a separate phase. Until then, this returns []. "
-                "See module docstring for the planned ingestion workflow.",
+                f"{self.cache_dir}. Populate via examples/nse_bhavcopy_fetch.py first.",
                 file=sys.stderr,
             )
             return []
-        # Real ingestion lives here. Stubbed today because populating the
-        # cache itself is the multi-day project. Sketch:
-        #   for year, csv_path in self._iter_cache_files(start_year, end_year):
-        #       parse symbol column from each row
-        #       record (symbol -> first_seen_date, last_seen_date)
-        #   delisted = [
-        #       {ticker, first_date, last_date, exit_event="bhavcopy_disappeared"}
-        #       for symbol, (fd, ld) in observed.items()
-        #       if ld < f"{end_year}-12-01"   # stopped trading before window end
-        #   ]
-        raise NotImplementedError(
-            "NSEBhavcopyAdapter is currently shell-only. The data ingestion "
-            "(downloading + parsing ~5,500 daily CSVs across two format eras) "
-            "is a separate phase — see the module docstring. The pure cache "
-            "walker (`_iter_cache_files`) is testable today."
-        )
+
+        # Walk every cached CSV, accumulate per-symbol (first_iso, last_iso).
+        # Date granularity = filename-derived YYYY-MM-DD. We don't trust the
+        # in-CSV date column for boundary tracking because the format
+        # changed mid-2024 and parsing it is brittle; the filename is
+        # always derivable from the date we asked jugaad-data to fetch.
+        observed: dict[tuple[str, str], dict] = {}
+        last_cache_date: str | None = None
+        for year, csv_path in self._iter_cache_files(start_year, end_year):
+            day_iso = _date_from_bhavcopy_filename(csv_path.name)
+            if day_iso is None:
+                continue
+            if last_cache_date is None or day_iso > last_cache_date:
+                last_cache_date = day_iso
+            for sym, series, _date_in_row in self._parse_bhavcopy_csv(csv_path):
+                key = (sym, series)
+                rec = observed.get(key)
+                if rec is None:
+                    observed[key] = {"first": day_iso, "last": day_iso}
+                else:
+                    if day_iso < rec["first"]:
+                        rec["first"] = day_iso
+                    if day_iso > rec["last"]:
+                        rec["last"] = day_iso
+
+        if last_cache_date is None or not observed:
+            return []
+
+        # A symbol is a delisted candidate if its last_seen is more than
+        # STALE_BUFFER_DAYS before the last cached date.
+        from datetime import date as _date  # noqa: PLC0415
+        last_dt = _date.fromisoformat(last_cache_date)
+        candidates: list[dict] = []
+        for (sym, series), rec in observed.items():
+            last_dt_sym = _date.fromisoformat(rec["last"])
+            staleness_days = (last_dt - last_dt_sym).days
+            if staleness_days < self.STALE_BUFFER_DAYS:
+                continue
+            candidates.append({
+                "ticker": sym,
+                "series": series,
+                "first_date": rec["first"],
+                "last_date": rec["last"],
+                "staleness_days": staleness_days,
+                "exit_event": "bhavcopy_disappeared",
+            })
+        candidates.sort(key=lambda r: (r["last_date"], r["ticker"]))
+        return candidates
 
 
 PROVIDERS: dict[str, type] = {

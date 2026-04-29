@@ -79,6 +79,10 @@ outputs/kite_reconcile.json
 outputs/paper_trade_progress.json
 outputs/pending_settlement.csv
 outputs/intraday_mtm.json
+# Bhavcopy cache (NSE daily CSVs) and the candidate list it produces.
+# 76 MB+ for 1 year of daily files; regenerable via examples/nse_bhavcopy_fetch.py.
+data/bhavcopy/
+outputs/external_delisted_tickers.json
 
 # Keep these committed:
 #   examples/*.py        production code
