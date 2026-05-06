@@ -194,11 +194,12 @@ def cmd_execute(args):
     pending_path.parent.mkdir(parents=True, exist_ok=True)
     pending.to_csv(pending_path, index=False)
 
-    # Update equity log — mark-to-market includes BOTH settled cash and the
-    # value of the still-pending T+N receivables (already-earned, just delayed)
+    # Persist settled cash and unsettled pending separately so a future
+    # execute() can read back cash without also adding matured pending again.
     pending_value = float(pending["amount"].sum()) if not pending.empty else 0.0
-    mark_portfolio_and_log(portfolio, current_cash + pending_value, args.date,
-                           args.qlib_provider, equity_path)
+    mark_portfolio_and_log(portfolio, current_cash, args.date,
+                           args.qlib_provider, equity_path,
+                           pending_value=pending_value)
 
     print(f"\n[done] {len(new_rows)} trades simulated, {len(portfolio)} holdings, "
           f"cash ₹{current_cash:,.0f}, unsettled ₹{pending_value:,.0f}")
@@ -210,7 +211,16 @@ def cmd_execute(args):
 
 def mark_portfolio_and_log(portfolio: pd.DataFrame, cash: float, as_of: str,
                            qlib_provider: str, equity_path: Path,
-                           portfolio_path: Path | None = None):
+                           portfolio_path: Path | None = None,
+                           pending_value: float = 0.0):
+    """Persist a marked equity row.
+
+    `cash` is SETTLED cash (spendable today). `pending_value` is unsettled
+    sell receivables tracked separately. Total equity rolls all three
+    components together. Splitting them prevents the row's `cash` column
+    from being read back next day AND `pending` rows from being released
+    on top of it — the historical double-count bug.
+    """
     if portfolio.empty:
         positions_value = 0.0
         unrealized = 0.0
@@ -233,9 +243,8 @@ def mark_portfolio_and_log(portfolio: pd.DataFrame, cash: float, as_of: str,
             enriched = enriched.drop(columns=["mark"])
             enriched.to_csv(portfolio_path, index=False)
 
-    total = cash + positions_value
+    total = cash + pending_value + positions_value
 
-    # Load NIFTY 50 close for same day
     try:
         nifty = close_price(["NIFTY50"], as_of, qlib_provider)
         nifty_close = float(nifty.iloc[0]) if not nifty.empty and not pd.isna(nifty.iloc[0]) else np.nan
@@ -245,6 +254,7 @@ def mark_portfolio_and_log(portfolio: pd.DataFrame, cash: float, as_of: str,
     row = {
         "date": as_of,
         "cash": round(cash, 2),
+        "pending_settlement": round(pending_value, 2),
         "positions_value": round(positions_value, 2),
         "total_equity": round(total, 2),
         "n_positions": len(portfolio),
@@ -276,13 +286,21 @@ def cmd_mark(args):
         if len(eq):
             cash = float(eq["cash"].iloc[-1])
 
+    pending_path = Path(args.pending_settlement)
+    if pending_path.exists():
+        pending = pd.read_csv(pending_path)
+        pending_value = float(pending["amount"].sum()) if not pending.empty else 0.0
+    else:
+        pending_value = 0.0
+
     qlib_init(args.qlib_provider)
     from qlib.data import D
     cal = D.calendar(start_time="2024-01-01")
     as_of = cal[-1].strftime("%Y-%m-%d")
 
     mark_portfolio_and_log(portfolio, cash, as_of, args.qlib_provider, equity_path,
-                           portfolio_path=portfolio_path)
+                           portfolio_path=portfolio_path,
+                           pending_value=pending_value)
     print(f"[mark] equity curve updated to {as_of}")
     eq = pd.read_csv(equity_path)
     print(eq.tail().to_string(index=False))

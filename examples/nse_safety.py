@@ -31,6 +31,11 @@ ALERT_LOG = Path("outputs/alerts.log")
 # Loss limits — tune these to your risk tolerance
 DAILY_LOSS_LIMIT = -0.05         # -5% in one day = HALT
 DRAWDOWN_LIMIT   = -0.20         # -20% from peak = HALT
+# Upside guard. A clean cross-sectional ranker on liquid NSE names will not
+# print +25% in a day; if it does, the equity curve is almost certainly
+# corrupted (paper-accounting drift, mismark, double-count). HALT and let a
+# human investigate — better to skip a day than ratchet on bad data.
+DAILY_GAIN_LIMIT = 0.25          # +25% in one day = HALT (paranoia rail)
 DATA_FRESHNESS_PCT = 0.80        # require >=80% of universe to have a bar for "today"
 DATA_FRESHNESS_DAYS = 3          # data is "fresh" if last bar is within N days
 
@@ -120,6 +125,11 @@ def check_pnl(equity_path: str = "outputs/paper_equity.csv") -> bool:
     breached = []
     if daily_ret <= DAILY_LOSS_LIMIT:
         breached.append(f"Daily loss {daily_ret:+.2%} <= limit {DAILY_LOSS_LIMIT:+.2%}")
+    if daily_ret >= DAILY_GAIN_LIMIT:
+        breached.append(
+            f"Daily gain {daily_ret:+.2%} >= upside limit {DAILY_GAIN_LIMIT:+.2%} "
+            f"— equity curve likely corrupted, investigate before resuming"
+        )
     if drawdown <= DRAWDOWN_LIMIT:
         breached.append(f"Drawdown {drawdown:+.2%} <= limit {DRAWDOWN_LIMIT:+.2%}")
 
