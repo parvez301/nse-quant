@@ -136,6 +136,21 @@ echo "[$TS] exporting today's features + booster..." | tee -a "$LOG"
 "$PYTHON" examples/nse_export_features_today.py 2>&1 | tee -a "$LOG" | grep -E "^\[features\]" || true
 
 # ---------------------------------------------------------------------------
+# Step 8.5: per-symbol rank history (rebuilds from outputs/decisions/*.json
+# every run; ~50 symbols × ~30 KB each, full rebuild stays under a second).
+# Read by /api/rank_history/<sym> for the Lab tab's rank-trajectory spark.
+# ---------------------------------------------------------------------------
+echo "[$TS] rebuilding rank history..." | tee -a "$LOG"
+"$PYTHON" examples/nse_build_rank_history.py 2>&1 | tee -a "$LOG" | grep -E "^\[" || true
+
+# ---------------------------------------------------------------------------
+# Step 8.55: NIFTY 50 regime classifier (Volatile/Trending/Choppy) + Sharpe
+# context. Read by /api/regime for the Today briefing card.
+# ---------------------------------------------------------------------------
+echo "[$TS] classifying NIFTY regime..." | tee -a "$LOG"
+"$PYTHON" examples/nse_regime_classifier.py 2>&1 | tee -a "$LOG" | grep -E "^\[regime\]" || true
+
+# ---------------------------------------------------------------------------
 # Step 8.7: 90-day paper-trade clock. Counts consecutive clean days and
 # resets on breach. Output read by the UI via /api/paper_trade_clock.
 # ---------------------------------------------------------------------------

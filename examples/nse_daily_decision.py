@@ -132,6 +132,41 @@ def load_current_portfolio(path: Path | None) -> pd.DataFrame:
     return df
 
 
+def load_prev_rank_map(out_dir: Path, as_of: str) -> dict:
+    """Build {symbol: {rank, score}} from the most recent prior decision JSON.
+
+    Looks for any decision JSON dated strictly before `as_of`. Returns empty
+    dict if none exists (first-run case). Reads BUY + HOLD + top_10_candidates
+    so the merge has rank coverage for any name that's relevant today.
+    """
+    if not out_dir.is_dir():
+        return {}
+    candidates = sorted(
+        p for p in out_dir.glob("*.json") if p.stem < as_of
+    )
+    if not candidates:
+        return {}
+    try:
+        with open(candidates[-1]) as f:
+            prev = json.load(f)
+    except (OSError, json.JSONDecodeError):
+        return {}
+    out: dict = {}
+    acts = prev.get("actions") or {}
+    for kind in ("BUY", "HOLD"):
+        for item in acts.get(kind) or []:
+            sym = item.get("symbol")
+            if not sym:
+                continue
+            rank = item.get("rank") if "rank" in item else item.get("rank_now")
+            out[sym] = {"rank": rank, "score": item.get("score")}
+    for r in prev.get("top_10_candidates") or []:
+        sym = r.get("instrument") or r.get("symbol")
+        if sym and sym not in out:
+            out[sym] = {"rank": r.get("rank"), "score": r.get("score")}
+    return out
+
+
 def build_decision(
     scored: pd.DataFrame,
     portfolio: pd.DataFrame,
@@ -139,6 +174,7 @@ def build_decision(
     buffer: int,
     min_liquidity: float,
     as_of: str,
+    prev_map: dict | None = None,
 ) -> dict:
     """Translate a score table into a concrete trade list.
 
@@ -175,6 +211,15 @@ def build_decision(
         row = ranked[ranked["instrument"] == sym]
         return float(row["score"].iloc[0]) if len(row) else None
 
+    pm = prev_map or {}
+
+    def with_prev(item: dict) -> dict:
+        sym = item.get("symbol")
+        prev = pm.get(sym) or {}
+        item["rank_prev"] = prev.get("rank")
+        item["score_prev"] = prev.get("score")
+        return item
+
     return {
         "as_of": as_of,
         "generated_at": datetime.now().isoformat(timespec="seconds"),
@@ -183,16 +228,16 @@ def build_decision(
         "topk": topk,
         "hold_buffer": buffer,
         "actions": {
-            "BUY": [{"symbol": s, "rank": rank_of(s), "score": score_of(s)} for s in buys],
+            "BUY": [with_prev({"symbol": s, "rank": rank_of(s), "score": score_of(s)}) for s in buys],
             "SELL": [
-                {
+                with_prev({
                     "symbol": s,
                     "rank_now": rank_of(s),
                     "reason": "fell out of top-{}".format(topk + buffer),
-                }
+                })
                 for s in sells
             ],
-            "HOLD": [{"symbol": s, "rank_now": rank_of(s), "score": score_of(s)} for s in holds],
+            "HOLD": [with_prev({"symbol": s, "rank_now": rank_of(s), "score": score_of(s)}) for s in holds],
         },
         "top_10_candidates": ranked.head(10)[["instrument", "rank", "score", "close", "turnover_proxy"]].to_dict(orient="records"),
     }
@@ -271,6 +316,12 @@ def main():
     portfolio = load_current_portfolio(Path(args.holdings_csv))
     print(f"[portfolio] {len(portfolio)} currently held")
 
+    out_dir = Path(args.out_dir)
+    out_dir.mkdir(parents=True, exist_ok=True)
+    prev_map = load_prev_rank_map(out_dir, as_of)
+    if prev_map:
+        print(f"[prev] loaded {len(prev_map)} prior ranks for diff")
+
     decision = build_decision(
         scored=scored,
         portfolio=portfolio,
@@ -278,10 +329,8 @@ def main():
         buffer=args.buffer,
         min_liquidity=args.min_liquidity,
         as_of=as_of,
+        prev_map=prev_map,
     )
-
-    out_dir = Path(args.out_dir)
-    out_dir.mkdir(parents=True, exist_ok=True)
     out_json = out_dir / f"{as_of}.json"
     out_txt = out_dir / f"{as_of}.txt"
     with open(out_json, "w") as f:

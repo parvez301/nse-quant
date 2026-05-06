@@ -89,6 +89,78 @@ def export_booster_text(model_dir: Path, out_path: Path) -> None:
     booster.save_model(str(out_path))
 
 
+def _load_booster(model_dir: Path):
+    import pickle
+    with open(model_dir / "model.pkl", "rb") as f:
+        wrapped = pickle.load(f)
+    return getattr(wrapped, "model", wrapped)
+
+
+def compute_shap_today(features: pd.DataFrame, model_dir: Path, top_k: int = 10) -> dict:
+    """Per-symbol top-k SHAP contributions using lightgbm's `pred_contrib=True`.
+
+    Returns `{symbol: {bias, score, top_contributors: [{feature, value, contribution}]}}`.
+    """
+    import numpy as np
+
+    booster = _load_booster(model_dir)
+    feat_cols = [c for c in features.columns if c not in ("date", "symbol")]
+    matrix = features[feat_cols].to_numpy(dtype=float)
+
+    # lightgbm returns shape (n, n_features+1) — last column is bias
+    contrib = booster.predict(matrix, pred_contrib=True)
+    n_feats = len(feat_cols)
+    feat_contrib = contrib[:, :n_feats]
+    bias = contrib[:, n_feats]
+
+    out: dict = {}
+    for i, sym in enumerate(features["symbol"].tolist()):
+        row_contrib = feat_contrib[i]
+        order = np.argsort(np.abs(row_contrib))[::-1][:top_k]
+        out[sym] = {
+            "bias": float(bias[i]),
+            "score": float(bias[i] + row_contrib.sum()),
+            "top_contributors": [
+                {
+                    "feature": feat_cols[j],
+                    "value": float(matrix[i, j]),
+                    "contribution": float(row_contrib[j]),
+                }
+                for j in order
+            ],
+        }
+    return out
+
+
+def compute_peers_today(features: pd.DataFrame, top_k: int = 5) -> dict:
+    """Cosine similarity over today's Alpha158 feature vectors.
+
+    Returns `{symbol: [{symbol, similarity}]}` for the top_k nearest peers.
+    """
+    import numpy as np
+
+    feat_cols = [c for c in features.columns if c not in ("date", "symbol")]
+    syms = features["symbol"].tolist()
+    matrix = features[feat_cols].to_numpy(dtype=float)
+    matrix = np.nan_to_num(matrix, nan=0.0, posinf=0.0, neginf=0.0)
+
+    norms = np.linalg.norm(matrix, axis=1, keepdims=True)
+    norms[norms == 0] = 1.0
+    normed = matrix / norms
+    sim = normed @ normed.T  # (n, n)
+    np.fill_diagonal(sim, -np.inf)
+
+    out: dict = {}
+    for i, sym in enumerate(syms):
+        order = np.argsort(sim[i])[::-1][:top_k]
+        out[sym] = [
+            {"symbol": syms[j], "similarity": float(sim[i, j])}
+            for j in order
+            if sim[i, j] > -np.inf
+        ]
+    return out
+
+
 def main():
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument("--provider_uri", default="data/qlib_data/in_data")
@@ -96,6 +168,8 @@ def main():
     p.add_argument("--model_dir", default="outputs/nse_baseline_750_long")
     p.add_argument("--out", default="outputs/analytics/features_today.parquet")
     p.add_argument("--booster_out", default="outputs/analytics/model_booster.txt")
+    p.add_argument("--shap_out", default="outputs/shap_today.json")
+    p.add_argument("--peers_out", default="outputs/peers_today.json")
     args = p.parse_args()
 
     date, symbols = collect_universe(Path(args.decisions_dir))
@@ -112,6 +186,22 @@ def main():
     booster_path = Path(args.booster_out)
     export_booster_text(Path(args.model_dir), booster_path)
     print(f"[features] wrote {booster_path} ({booster_path.stat().st_size / 1024:.1f} KB)")
+
+    # SHAP per-symbol top-10 contributors. Read by /api/shap_today.
+    shap_path = Path(args.shap_out)
+    shap_path.parent.mkdir(parents=True, exist_ok=True)
+    shap_payload = compute_shap_today(df, Path(args.model_dir), top_k=10)
+    with open(shap_path, "w") as f:
+        json.dump({"as_of": str(date), "symbols": shap_payload}, f, default=float)
+    print(f"[features] wrote {shap_path} ({shap_path.stat().st_size / 1024:.1f} KB)")
+
+    # Cosine peers across today's universe. Read by /api/peers_today.
+    peers_path = Path(args.peers_out)
+    peers_path.parent.mkdir(parents=True, exist_ok=True)
+    peers_payload = compute_peers_today(df, top_k=5)
+    with open(peers_path, "w") as f:
+        json.dump({"as_of": str(date), "symbols": peers_payload}, f, default=float)
+    print(f"[features] wrote {peers_path} ({peers_path.stat().st_size / 1024:.1f} KB)")
 
 
 if __name__ == "__main__":

@@ -24,6 +24,7 @@ import hashlib
 import io
 import json
 import os
+import urllib.error
 import urllib.parse
 import urllib.request
 from pathlib import Path
@@ -38,6 +39,25 @@ s3 = boto3.client("s3")
 secrets = boto3.client("secretsmanager")
 
 INDEX_HTML = (Path(__file__).parent / "index.html").read_text()
+
+# v2 redesign — separate file tree under ui_lambda/v2/. Loaded at module
+# init so the Lambda doesn't read disk per request. Keys are URL paths
+# without the /v2 prefix; values are (bytes, content_type).
+_V2_DIR = Path(__file__).parent / "v2"
+_V2_MIME = {
+    ".html": "text/html; charset=utf-8",
+    ".css": "text/css; charset=utf-8",
+    ".js": "application/javascript; charset=utf-8",
+    ".jsx": "application/javascript; charset=utf-8",
+}
+V2_FILES: dict[str, tuple[bytes, str]] = {}
+if _V2_DIR.is_dir():
+    for _f in _V2_DIR.iterdir():
+        if _f.is_file():
+            V2_FILES[_f.name] = (
+                _f.read_bytes(),
+                _V2_MIME.get(_f.suffix.lower(), "application/octet-stream"),
+            )
 
 
 def _get_object(key: str) -> bytes | None:
@@ -123,6 +143,69 @@ def _kite_exchange_token(api_key: str, api_secret: str, request_token: str) -> d
     if payload.get("status") != "success":
         raise RuntimeError(f"Kite token exchange failed: {payload}")
     return payload["data"]
+
+
+def _kite_quote(symbols: list[str]) -> dict:
+    """Fetch live quotes from Kite Connect REST API directly (no SDK needed).
+
+    Auth: `Authorization: token <api_key>:<access_token>`
+    Doc: https://kite.trade/docs/connect/v3/market-quotes/
+
+    Returns `{symbol: {last_price, ohlc, prev_close, change_pct, timestamp}}`.
+    Symbols missing from the response are simply absent from the output.
+    Caller is responsible for handling auth/network failures (raises on error).
+    """
+    if not symbols:
+        return {}
+    creds = _kite_secret()
+    api_key = creds.get("api_key")
+    access_token = creds.get("access_token")
+    if not api_key or not access_token:
+        raise RuntimeError("kite credentials missing")
+
+    qs = urllib.parse.urlencode([("i", f"NSE:{s}") for s in symbols])
+    url = f"https://api.kite.trade/quote?{qs}"
+    req = urllib.request.Request(
+        url,
+        headers={
+            "X-Kite-Version": "3",
+            "Authorization": f"token {api_key}:{access_token}",
+        },
+    )
+    with urllib.request.urlopen(req, timeout=8) as resp:
+        payload = json.loads(resp.read().decode("utf-8"))
+    if payload.get("status") != "success":
+        raise RuntimeError(f"kite quote failed: {payload.get('message') or payload}")
+
+    out: dict = {}
+    for key, q in (payload.get("data") or {}).items():
+        sym = key.split(":", 1)[1] if ":" in key else key
+        if not q:
+            continue
+        ohlc = q.get("ohlc") or {}
+        prev_close = ohlc.get("close")
+        last = q.get("last_price")
+        change_pct = None
+        if prev_close and last is not None:
+            try:
+                change_pct = (float(last) / float(prev_close) - 1) * 100.0
+            except (TypeError, ValueError, ZeroDivisionError):
+                change_pct = None
+        out[sym] = {
+            "last_price": last,
+            "ohlc": {
+                "open":  ohlc.get("open"),
+                "high":  ohlc.get("high"),
+                "low":   ohlc.get("low"),
+                "close": ohlc.get("close"),  # this is prev close per Kite spec
+            },
+            "prev_close": prev_close,
+            "change_pct": round(change_pct, 4) if change_pct is not None else None,
+            "timestamp": q.get("timestamp"),
+            "last_trade_time": q.get("last_trade_time"),
+            "volume": q.get("volume"),
+        }
+    return out
 
 
 def _kite_callback_html(client_id: str, set_at_ist: str, valid_until_ist: str) -> str:
@@ -245,6 +328,22 @@ def handler(event, context):
     if path == "/" or path == "/index.html":
         return _resp(200, INDEX_HTML, content_type="text/html; charset=utf-8")
 
+    # v2 redesign — opt-in URL. Real data only, fields not yet wired
+    # render as small "wiring pending" chips rather than mocks.
+    if path == "/v2" or path == "/v2/":
+        rec = V2_FILES.get("index.html")
+        if rec is None:
+            return _resp(404, {"error": "v2 not deployed"})
+        body, ctype = rec
+        return _resp(200, body.decode("utf-8"), content_type=ctype)
+    if path.startswith("/v2/"):
+        fname = path[len("/v2/"):]
+        rec = V2_FILES.get(fname)
+        if rec is None:
+            return _resp(404, {"error": f"v2 asset not found: {fname}"})
+        body, ctype = rec
+        return _resp(200, body.decode("utf-8"), content_type=ctype)
+
     if path == "/kite-login":
         return _handle_kite_login()
     if path == "/kite-callback":
@@ -314,6 +413,52 @@ def handler(event, context):
         lines = raw.decode("utf-8", errors="replace").splitlines()[-50:]
         return _resp(200, {"lines": lines})
 
+    if path.startswith("/api/trades/"):
+        sym = path[len("/api/trades/"):].strip().upper()
+        if not sym:
+            return _resp(400, {"error": "symbol required"})
+        raw = _get_object("outputs/trade_log.csv")
+        if raw is None:
+            return _resp(200, [])
+        rows = [r for r in _csv_to_rows(raw) if (r.get("symbol") or "").upper() == sym]
+        return _resp(200, rows)
+
+    if path == "/api/kite_quote":
+        qs = _parse_query(event)
+        raw_syms = (qs.get("symbols") or "").strip()
+        if not raw_syms:
+            return _resp(400, {"error": "symbols query param required, e.g. ?symbols=INFY,RELIANCE"})
+        symbols = [s.strip().upper() for s in raw_syms.split(",") if s.strip()]
+        if not symbols:
+            return _resp(400, {"error": "no valid symbols"})
+        if len(symbols) > 100:
+            return _resp(400, {"error": "symbols limit is 100 per call"})
+        try:
+            quotes = _kite_quote(symbols)
+        except urllib.error.HTTPError as exc:
+            return _resp(502, {"error": "kite_http_error", "status": exc.code,
+                               "detail": exc.reason})
+        except Exception as exc:
+            return _resp(502, {"error": "kite_quote_failed",
+                               "detail": f"{type(exc).__name__}: {exc}"})
+        return _resp(200, {
+            "as_of": datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+            "symbols": quotes,
+            "missing": [s for s in symbols if s not in quotes],
+        })
+
+    if path.startswith("/api/rank_history/"):
+        sym = path[len("/api/rank_history/"):].strip().upper()
+        if not sym:
+            return _resp(400, {"error": "symbol required"})
+        raw = _get_object(f"outputs/rank_history/{sym}.json")
+        if raw is None:
+            return _resp(200, [])
+        try:
+            return _resp(200, json.loads(raw))
+        except json.JSONDecodeError:
+            return _resp(200, [])
+
     # ---- methodology / honest-caveat artefacts -----------------------------
     if path == "/api/stratified":
         raw = _get_object("outputs/stratified_stats.json")
@@ -330,5 +475,21 @@ def handler(event, context):
     if path == "/api/outage":
         raw = _get_object("outputs/outage_monte_carlo.json")
         return _resp(200, json.loads(raw) if raw else {})
+
+    if path == "/api/regime":
+        raw = _get_object("outputs/regime.json")
+        return _resp(200, json.loads(raw) if raw else None)
+
+    if path == "/api/shap_today":
+        raw = _get_object("outputs/shap_today.json")
+        return _resp(200, json.loads(raw) if raw else None)
+
+    if path == "/api/peers_today":
+        raw = _get_object("outputs/peers_today.json")
+        return _resp(200, json.loads(raw) if raw else None)
+
+    if path == "/api/hit_rates":
+        raw = _get_object("outputs/hit_rates.json")
+        return _resp(200, json.loads(raw) if raw else None)
 
     return _resp(404, {"error": "not found"})
