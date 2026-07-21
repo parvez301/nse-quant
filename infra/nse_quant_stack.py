@@ -1,3 +1,4 @@
+import os
 from pathlib import Path
 
 from aws_cdk import (
@@ -413,6 +414,63 @@ class NseQuantStack(Stack):
             "KiteTokenMonitorSchedule",
             schedule=events.Schedule.cron(minute="0", hour="1", week_day="MON-FRI"),
             targets=[events_targets.LambdaFunction(tokenMonitorLambda)],
+        )
+
+        # ------------------------------------------------------------------
+        # Kite auto-login — mints the daily access_token unattended by
+        # driving Zerodha's web-login endpoints with a locally-computed TOTP.
+        #
+        # NOTE: automated login is NOT permitted by the Kite Connect terms of
+        # service (SEBI requires the second factor come from a human). This is
+        # deployed as a deliberate operator trade-off. Flip AUTO_LOGIN_ENABLED
+        # to "false" to disable without tearing the stack down; the manual
+        # /kite-login flow and the token monitor above both keep working.
+        #
+        # Requires kite_user_id / kite_password / totp_secret in the secret —
+        # see docs/kite_auto_login.md. Absent those, the function alerts and
+        # no-ops rather than failing silently.
+        # ------------------------------------------------------------------
+        autoLoginLogGroup = logs.LogGroup(
+            self,
+            "KiteAutoLoginLogs",
+            retention=logs.RetentionDays.ONE_MONTH,
+            removal_policy=RemovalPolicy.DESTROY,
+        )
+        autoLoginLambda = lambda_.Function(
+            self,
+            "KiteAutoLogin",
+            runtime=lambda_.Runtime.PYTHON_3_11,
+            architecture=lambda_.Architecture.ARM_64,
+            handler="handler.handler",
+            # Pure stdlib (urllib + hmac) — no bundling needed.
+            code=lambda_.Code.from_asset(str(REPO_ROOT / "kite_auto_login_lambda")),
+            memory_size=128,
+            # Generous vs. the monitor: the login is 4 sequential round-trips
+            # to Zerodha, and the TOTP step may sleep ~2.5s across a rollover.
+            timeout=Duration.seconds(60),
+            environment={
+                "KITE_SECRET_NAME": kiteSecret.secret_name,
+                "SNS_TOPIC_ARN": notifyTopic.topic_arn,
+                "KITE_LOGIN_URL": kiteLoginUrl,
+                "AUTO_LOGIN_ENABLED": os.environ.get("KITE_AUTO_LOGIN", "true"),
+            },
+            log_group=autoLoginLogGroup,
+        )
+        kiteSecret.grant_read(autoLoginLambda)
+        kiteSecret.grant_write(autoLoginLambda)
+        notifyTopic.grant_publish(autoLoginLambda)
+
+        # 00:45 UTC Mon-Fri = 06:15 IST. Fires 15 min after the 06:00 IST
+        # expiry (logging in before it is pointless — the new token would be
+        # invalidated immediately) and 15 min before KiteTokenMonitor at
+        # 06:30 IST, which then acts as the verifier: if auto-login failed,
+        # the monitor pages the operator with 90 min of runway before the
+        # 08:00 IST decision cron.
+        events.Rule(
+            self,
+            "KiteAutoLoginSchedule",
+            schedule=events.Schedule.cron(minute="45", hour="0", week_day="MON-FRI"),
+            targets=[events_targets.LambdaFunction(autoLoginLambda)],
         )
 
         # ------------------------------------------------------------------
