@@ -47,10 +47,32 @@ fi
 # ---------------------------------------------------------------------------
 if [ "$SKIP_REFRESH" != "1" ]; then
     echo "[$TS] incremental refresh of yfinance data..." | tee -a "$LOG"
-    if ! "$PYTHON" examples/nse_data_loader.py --incremental 2>&1 | tee -a "$LOG" | grep -E "^\[(plan|download|setup|dump)\]|Qlib binary dataset ready"; then
+    if ! "$PYTHON" examples/nse_data_loader.py --incremental --skip_dump 2>&1 | tee -a "$LOG" | grep -E "^\[(plan|download|setup|dump)\]"; then
         echo "[$TS] ❌ data refresh failed" | tee -a "$LOG"
         "$PYTHON" examples/nse_safety.py notify "Cron failed at data refresh step" || true
         "$PYTHON" examples/nse_safety.py halt "Data refresh exit code != 0" || true
+        exit 1
+    fi
+
+    # Step 1b: patch the newest session from NSE's official Bhavcopy.
+    #
+    # Yahoo publishes the previous session with volume but null OHLC for a
+    # large slice of the universe until ~a day after the close; the loader now
+    # drops those rows rather than letting them advance the calendar with a
+    # NaN close. That keeps us running but one session behind, so we refill
+    # that session from the exchange's own EOD file.
+    #
+    # Never fatal. If NSE blocks us or the day is a holiday this no-ops and
+    # the pipeline proceeds on the last complete session.
+    echo "[$TS] EOD repair from NSE Bhavcopy..." | tee -a "$LOG"
+    "$PYTHON" examples/nse_eod_repair.py 2>&1 | tee -a "$LOG" | grep -E "^\[eod-repair\]" || true
+
+    # Step 1c: rebuild the Qlib binary now that the CSVs are final.
+    echo "[$TS] rebuilding Qlib binary..." | tee -a "$LOG"
+    if ! "$PYTHON" examples/nse_data_loader.py --dump_only 2>&1 | tee -a "$LOG" | grep -E "^\[plan\]|Qlib binary dataset rebuilt"; then
+        echo "[$TS] ❌ qlib dump failed" | tee -a "$LOG"
+        "$PYTHON" examples/nse_safety.py notify "Cron failed at qlib dump step" || true
+        "$PYTHON" examples/nse_safety.py halt "Qlib dump exit code != 0" || true
         exit 1
     fi
 else

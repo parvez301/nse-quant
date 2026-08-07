@@ -9,6 +9,7 @@ scikit-learn>=1.3
 
 # Data ingestion
 yfinance>=0.2.40          # NSE/BSE historical OHLCV
+jugaad-data>=0.26         # NSE Bhavcopy (official EOD) — repairs the newest session
 requests>=2.31
 
 # Optional but useful

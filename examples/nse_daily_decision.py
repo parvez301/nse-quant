@@ -26,7 +26,7 @@ import json
 import os
 import pickle
 import sys
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 
 import numpy as np
@@ -222,7 +222,9 @@ def build_decision(
 
     return {
         "as_of": as_of,
-        "generated_at": datetime.now().isoformat(timespec="seconds"),
+        # Timezone-aware on purpose. The container runs UTC, so a naive stamp
+        # was being re-read as browser-local and rendered ~1.5h off in IST.
+        "generated_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
         "universe_size": int(len(scored)),
         "liquid_universe_size": int(len(liquid)),
         "topk": topk,

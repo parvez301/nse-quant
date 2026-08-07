@@ -155,6 +155,25 @@ def _flatten_yf_columns(df: pd.DataFrame) -> pd.DataFrame:
     return df
 
 
+OHLC_COLUMNS = ["open", "high", "low", "close"]
+
+
+def _drop_unusable_bars(df: pd.DataFrame) -> pd.DataFrame:
+    """Drop rows whose OHLC is not fully populated.
+
+    Yahoo publishes the previous session's bar with `volume` filled but the
+    price fields null for a large slice of NSE names, and only backfills the
+    prices ~a day after the close. Letting those rows through advances the
+    Qlib calendar to a date whose close is NaN, which makes stale data look
+    fresh to every downstream consumer and trips the coverage gate in
+    nse_safety.check_data.
+
+    Zero volume is deliberately left alone — illiquid microcaps legitimately
+    print a no-trade session, and those bars carry usable prices.
+    """
+    return df.dropna(subset=OHLC_COLUMNS)
+
+
 def _yf_one(yf_symbol: str, start: str, end: str):
     import yfinance as yf
     df = yf.download(
@@ -170,6 +189,9 @@ def _yf_one(yf_symbol: str, start: str, end: str):
     df = _flatten_yf_columns(df.reset_index())
     needed = {"date", "open", "high", "low", "close", "volume"}
     if not needed.issubset(df.columns):
+        return None
+    df = _drop_unusable_bars(df)
+    if df.empty:
         return None
     return df
 
@@ -325,10 +347,30 @@ def main():
     p.add_argument("--skip_benchmark", action="store_true")
     p.add_argument("--skip_dump", action="store_true",
                    help="don't rebuild Qlib binary after download")
+    p.add_argument("--dump_only", action="store_true",
+                   help="rebuild the Qlib binary from the existing CSVs and nothing "
+                        "else — no universe assembly, no download. Used by the daily "
+                        "cron to re-dump after nse_eod_repair.py patches the CSVs.")
     args = p.parse_args()
 
     qlib_dir = Path(args.out).expanduser()
     csv_dir = Path(args.csv_dir).expanduser() if args.csv_dir else (qlib_dir / "_csv")
+
+    # ----- dump-only fast path -----
+    # Deliberately skips assemble_universe: that hits NSE for index membership,
+    # and a second network dependency in the re-dump pass would reintroduce the
+    # very fragility this path exists to avoid.
+    if args.dump_only:
+        if not csv_dir.exists():
+            sys.exit(f"[abort] --dump_only set but {csv_dir} does not exist")
+        try:
+            import qlib  # noqa: F401
+        except ImportError:
+            sys.exit("pyqlib not installed. Run: pip install pyqlib")
+        print(f"[plan] dump-only from {csv_dir} -> {qlib_dir}")
+        dump_to_qlib(csv_dir, qlib_dir)
+        print(f"\n Qlib binary dataset rebuilt at: {qlib_dir}")
+        return
 
     # ----- universe -----
     if args.tickers:

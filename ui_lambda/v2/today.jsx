@@ -14,20 +14,82 @@ function _PendingChip({ label, hint }) {
   );
 }
 
+// Decision JSONs written before 2026-08-07 carry a naive timestamp produced in
+// the UTC container. Without this the browser reads them as local time and the
+// header renders ~1.5h off in IST.
+function _parseStamp(iso) {
+  if (!iso) return null;
+  const hasZone = /(?:Z|[+-]\d{2}:?\d{2})$/.test(iso);
+  const d = new Date(hasZone ? iso : iso + "Z");
+  return isNaN(d.getTime()) ? null : d;
+}
+
+// as_of is a bare calendar date. Pin it to UTC so it can't slide a day for
+// viewers west of Greenwich.
+function _parseSessionDate(dateOnly) {
+  if (!dateOnly) return null;
+  const d = new Date(String(dateOnly).slice(0, 10) + "T00:00:00Z");
+  return isNaN(d.getTime()) ? null : d;
+}
+
 function _fmtDate(iso) {
   if (!iso) return "—";
-  try {
-    const d = new Date(iso);
-    return d.toLocaleDateString("en-GB", { weekday: "short", day: "2-digit", month: "short", year: "numeric" });
-  } catch { return iso; }
+  const d = _parseSessionDate(iso) || _parseStamp(iso);
+  if (!d) return iso;
+  return d.toLocaleDateString("en-GB", {
+    weekday: "short", day: "2-digit", month: "short", year: "numeric", timeZone: "UTC",
+  });
 }
 
 function _fmtTime(iso) {
-  if (!iso) return "";
-  try {
-    const d = new Date(iso);
-    return d.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", timeZone: "Asia/Kolkata" }) + " IST";
-  } catch { return ""; }
+  const d = _parseStamp(iso);
+  if (!d) return "";
+  return d.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", timeZone: "Asia/Kolkata" }) + " IST";
+}
+
+// Calendar days between the decision's session and today, both pinned to UTC.
+function _sessionAgeDays(asOf) {
+  const d = _parseSessionDate(asOf);
+  if (!d) return null;
+  const now = new Date();
+  const todayUTC = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
+  return Math.round((todayUTC - d.getTime()) / 86400000);
+}
+
+// A normal weekend already puts Friday's session 3 days behind by Monday, and
+// a Monday holiday makes that 4. Warn beyond that.
+const STALE_AFTER_DAYS = 4;
+
+function StalenessBanner({ decision, lastRun }) {
+  const ageDays = _sessionAgeDays(decision?.as_of);
+  const isStale = ageDays != null && ageDays > STALE_AFTER_DAYS;
+  const runFailed = lastRun && lastRun.exit_code != null && Number(lastRun.exit_code) !== 0;
+
+  if (!isStale && !runFailed) return null;
+
+  return (
+    <div className="card flush"
+         style={{ padding: "16px 24px", marginBottom: "var(--gap)",
+                  background: "var(--sell-soft)", borderLeft: "3px solid var(--warn)" }}>
+      <div className="t-eyebrow" style={{ color: "var(--warn)", marginBottom: 6 }}>
+        {isStale ? "Stale signals — do not trade these" : "Pipeline degraded"}
+      </div>
+      <div style={{ fontSize: 13, color: "var(--ink-2)", lineHeight: 1.6 }}>
+        {isStale && (
+          <div>
+            The basket below is from the <strong>{_fmtDate(decision?.as_of)}</strong> session
+            {" — "}<strong>{ageDays} days old</strong>. It does not reflect the current market.
+          </div>
+        )}
+        {runFailed && (
+          <div style={{ marginTop: isStale ? 4 : 0, fontFamily: "var(--font-mono)", fontSize: 12 }}>
+            last run {lastRun.date || "—"} exited {String(lastRun.exit_code)} — no decision was emitted.
+            Check the Alerts panel for the reason.
+          </div>
+        )}
+      </div>
+    </div>
+  );
 }
 
 function _rankByRank(entries) {
@@ -321,6 +383,7 @@ function TodayView({ state }) {
   if (!decision) {
     return (
       <div className="page">
+        <StalenessBanner decision={null} lastRun={state?.lastRun} />
         <div className="card flush" style={{ padding: 36 }}>
           <div className="t-eyebrow">No decisions yet</div>
           <p style={{ marginTop: 12, color: "var(--muted)" }}>Cron has not produced a decision JSON yet.</p>
@@ -331,6 +394,7 @@ function TodayView({ state }) {
 
   return (
     <div className="page">
+      <StalenessBanner decision={decision} lastRun={state?.lastRun} />
       <Briefing decision={decision} clock={clock} halt={halt} regime={state?.regime} />
       <Signals decision={decision} shapToday={state?.shapToday} hitRates={state?.hitRates} />
       <PortfolioRanks portfolio={portfolio} decision={decision} />
