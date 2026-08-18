@@ -6,6 +6,11 @@ The best we can do is page the operator early enough to log in before
 the morning decision cron at 08:00 IST and the post-close cron at
 16:00 IST need the token.
 
+As of 2026-07-20 this is the *verifier* rather than the only line of defence:
+KiteAutoLogin runs 15 min earlier (06:15 IST) and mints the token unattended.
+This monitor still runs so an auto-login failure degrades to the manual flow
+instead of a silent no-token day. See docs/kite_auto_login.md.
+
 Triggered by EventBridge at 01:00 UTC (= 06:30 IST) Mon-Fri. Alerts if:
   * the token has already expired, OR
   * the token will expire within 90 minutes (i.e. before 08:00 IST cron).
