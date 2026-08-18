@@ -1,7 +1,10 @@
 """UI Lambda — serves an HTML page and JSON snapshots from the state bucket.
 
 Routes (Function URL):
-  GET /                    -> index.html
+  GET /                    -> v2 dashboard (default; falls back to legacy
+                              index.html if v2 assets are missing)
+  GET /v1                  -> legacy single-page dashboard
+  GET /v2, /v2/<asset>     -> v2 dashboard + its static assets
   GET /api/last_run        -> last_run.json
   GET /api/decisions       -> last 30 decision JSONs (newest first)
   GET /api/portfolio       -> current_portfolio.csv as JSON
@@ -325,11 +328,17 @@ def handler(event, context):
     if method != "GET":
         return _resp(405, {"error": "method not allowed"})
 
+    # v2 is the default UI; legacy dashboard stays reachable at /v1.
     if path == "/" or path == "/index.html":
+        rec = V2_FILES.get("index.html")
+        if rec is None:
+            return _resp(200, INDEX_HTML, content_type="text/html; charset=utf-8")
+        body, ctype = rec
+        return _resp(200, body.decode("utf-8"), content_type=ctype)
+
+    if path == "/v1" or path == "/v1/":
         return _resp(200, INDEX_HTML, content_type="text/html; charset=utf-8")
 
-    # v2 redesign — opt-in URL. Real data only, fields not yet wired
-    # render as small "wiring pending" chips rather than mocks.
     if path == "/v2" or path == "/v2/":
         rec = V2_FILES.get("index.html")
         if rec is None:
