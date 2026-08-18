@@ -24,6 +24,25 @@ from options.underlying import AdjustedCloseStore  # noqa: E402
 
 JUDGED_START, JUDGED_END = "2023-01-01", "2026-08-18"
 
+# The 13 large caps from the friend's follow-up spreadsheet
+# (S7hwts2HCevZtLC1-_TBE.xlsx), with his measured "months inside ±12% of
+# month-open" win counts over 79 months — his own numbers, quoted verbatim.
+SHEET_STOCKS = {
+    "TCS":        {"win": 66, "loose": 13},
+    "RELIANCE":   {"win": 62, "loose": 17},
+    "SBICARD":    {"win": 39, "loose": 26},
+    "MARUTI":     {"win": 62, "loose": 17},
+    "TATACONSUM": {"win": 58, "loose": 21},
+    "HINDUNILVR": {"win": 68, "loose": 11},
+    "ULTRACEMCO": {"win": 61, "loose": 18},
+    "AMBUJACEM":  {"win": 53, "loose": 26},
+    "BAJFINANCE": {"win": 54, "loose": 25},
+    "ASIANPAINT": {"win": 61, "loose": 18},
+    "ITC":        {"win": 65, "loose": 14},
+    "TATASTEEL":  {"win": 45, "loose": 34},
+    "GRASIM":     {"win": 58, "loose": 21},
+}
+
 
 def cycle_filter_counts(archive_root: pathlib.Path) -> dict:
     trading_days = _archive_days(archive_root, JUDGED_START, JUDGED_END)
@@ -64,7 +83,51 @@ def main() -> int:
     for trade in trades:
         exit_reasons[trade["exit_reason"]] += 1
 
+    # ── The friend's 13 sheet stocks, simulated two ways ────────────
+    # (a) "his rules": identical protocol to the judged verdict, universe
+    #     restricted to the 13; (b) "every tradeable month": score floor and
+    #     position cap lifted (capital raised so margin never blocks entry)
+    #     so EVERY sheet stock trades each non-excluded cycle — a per-stock
+    #     exhibit, not a portfolio claim.
+    sheet_universe = set(SHEET_STOCKS)
+    sheet_rules = run_backtest(archive_root, close_store, JUDGED_START, JUDGED_END,
+                               stop_key="none", use_earnings_filter=True,
+                               capital=JUDGE_CAPITAL,
+                               blackouts_path=REPO_ROOT / "data" / "options_blackouts.yaml",
+                               universe=sheet_universe)
+    sheet_forced = run_backtest(archive_root, close_store, JUDGED_START, JUDGED_END,
+                                stop_key="none", use_earnings_filter=True,
+                                capital=3_000_000.0,
+                                blackouts_path=REPO_ROOT / "data" / "options_blackouts.yaml",
+                                universe=sheet_universe, score_floor=0.0,
+                                max_positions=len(sheet_universe))
+    sheet_trades_by_symbol: dict[str, list[dict]] = {}
+    for trade in sorted(sheet_forced["trades"], key=lambda t: t["entry_date"]):
+        rounded = {key: (round(value, 4) if isinstance(value, float) else value)
+                   for key, value in trade.items()}
+        sheet_trades_by_symbol.setdefault(trade["symbol"], []).append(rounded)
+    per_stock_rows = []
+    for symbol, claim in sorted(SHEET_STOCKS.items()):
+        symbol_trades = sheet_trades_by_symbol.get(symbol, [])
+        symbol_wins = [t for t in symbol_trades if t["net_pnl"] > 0]
+        per_stock_rows.append({
+            "symbol": symbol,
+            "sheet_win_pct": round(claim["win"] / (claim["win"] + claim["loose"]), 3),
+            "sim_trades": len(symbol_trades),
+            "sim_win_pct": (round(len(symbol_wins) / len(symbol_trades), 3)
+                            if symbol_trades else None),
+            "sim_net_pnl": round(sum(t["net_pnl"] for t in symbol_trades)),
+        })
+
     payload = {
+        "sheet_study": {
+            "rules_stats": {key: (round(value, 4) if isinstance(value, float) else value)
+                            for key, value in summary_stats(sheet_rules).items()},
+            "forced_stats": {key: (round(value, 4) if isinstance(value, float) else value)
+                             for key, value in summary_stats(sheet_forced).items()},
+            "per_stock": per_stock_rows,
+            "trades_by_symbol": sheet_trades_by_symbol,
+        },
         "generated_at": datetime.date.today().isoformat(),
         "window": {"start": JUDGED_START, "end": JUDGED_END},
         "stats": {key: (round(value, 4) if isinstance(value, float) else value)

@@ -226,7 +226,8 @@ def run_cycle(cycle: dict, archive_root: pathlib.Path, close_store,
               blackout_ranges, stop_multiplier: float | None,
               use_earnings_filter: bool, capital: float,
               score_floor: float = SCORE_FLOOR,
-              universe: set[str] | None = None) -> list[dict]:
+              universe: set[str] | None = None,
+              max_positions: int = MAX_POSITIONS) -> list[dict]:
     candidates = _entry_candidates(cycle, archive_root, close_store,
                                    blackout_ranges, use_earnings_filter,
                                    universe=universe)
@@ -234,7 +235,7 @@ def run_cycle(cycle: dict, archive_root: pathlib.Path, close_store,
     positions: list[StranglePosition] = []
     margin_used = 0.0
     for candidate in candidates:
-        if len(positions) >= MAX_POSITIONS:
+        if len(positions) >= max_positions:
             break
         if candidate["score"] < score_floor:
             continue
@@ -284,7 +285,8 @@ def run_backtest(archive_root: pathlib.Path, close_store, start_iso: str,
                  capital: float, blackouts_path: pathlib.Path,
                  expiry_dates: list[str] | None = None,
                  score_floor: float = SCORE_FLOOR,
-                 universe: set[str] | None = None) -> dict:
+                 universe: set[str] | None = None,
+                 max_positions: int = MAX_POSITIONS) -> dict:
     stop_multiplier = STOP_MULTIPLIERS[stop_key]
     blackout_ranges = load_blackouts(blackouts_path)
     trading_days = _archive_days(archive_root, start_iso, end_iso)
@@ -296,7 +298,7 @@ def run_backtest(archive_root: pathlib.Path, close_store, start_iso: str,
         all_trades.extend(run_cycle(cycle, archive_root, close_store,
                                     blackout_ranges, stop_multiplier,
                                     use_earnings_filter, capital, score_floor,
-                                    universe=universe))
+                                    universe=universe, max_positions=max_positions))
     equity_curve = _equity_curve(all_trades, trading_days, capital)
     return {"trades": all_trades, "equity_curve": equity_curve,
             "monthly_returns": _monthly_returns(equity_curve),
