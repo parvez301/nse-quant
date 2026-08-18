@@ -49,7 +49,9 @@ function App() {
   return (
     <div className="shell">
       <Topbar tab={tab} setTab={setTab} lastRun={state.lastRun} halt={state.halt} />
-      <TrustStrip clock={state.paperTradeClock} />
+      {/* Paper-trade gate belongs to the equity ranker — hide it on the
+          self-contained options study exhibit. */}
+      {tab !== "options" && <TrustStrip clock={state.paperTradeClock} />}
       {tab === "today"       && <TodayView state={state} />}
       {tab === "dashboard"   && <Dashboard data={state} />}
       {tab === "explorer"    && <ExplorerProView state={state} />}
