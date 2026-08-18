@@ -104,3 +104,4 @@ outputs/*.broken-backup
 #   outputs/paper_equity.csv          (equity history)
 #   outputs/trade_log.csv             (trade audit)
 #   outputs/summary.csv,summary.txt   (walkforward summary, no per-window dirs)
+data/fo_bhavcopy/
