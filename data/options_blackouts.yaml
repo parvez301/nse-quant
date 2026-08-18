@@ -1,0 +1,16 @@
+# Macro-event blackout windows for the DSRD strangle strategy (spec §4).
+# Hand-maintained. Cycles overlapping any range are skipped for NEW entries.
+# Format: list of {start, end, reason} with ISO dates, inclusive.
+blackouts:
+  - {start: 2019-02-01, end: 2019-02-03, reason: "Interim Budget 2019"}
+  - {start: 2019-04-11, end: 2019-05-23, reason: "General election 2019 (7 phases + count)"}
+  - {start: 2019-07-05, end: 2019-07-07, reason: "Union Budget Jul 2019"}
+  - {start: 2020-02-01, end: 2020-02-03, reason: "Union Budget 2020"}
+  - {start: 2021-02-01, end: 2021-02-03, reason: "Union Budget 2021"}
+  - {start: 2022-02-01, end: 2022-02-03, reason: "Union Budget 2022"}
+  - {start: 2023-02-01, end: 2023-02-03, reason: "Union Budget 2023"}
+  - {start: 2024-02-01, end: 2024-02-03, reason: "Interim Budget 2024"}
+  - {start: 2024-04-19, end: 2024-06-04, reason: "General election 2024 (phases + count)"}
+  - {start: 2024-07-23, end: 2024-07-25, reason: "Union Budget Jul 2024"}
+  - {start: 2025-02-01, end: 2025-02-03, reason: "Union Budget 2025"}
+  - {start: 2026-02-01, end: 2026-02-03, reason: "Union Budget 2026"}
