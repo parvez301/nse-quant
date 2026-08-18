@@ -221,36 +221,71 @@ function TradeWalkthrough({ trade, index }) {
 
 function StockExplorer({ tracker }) {
   const tradesBySymbol = tracker.trades_by_symbol || {};
-  const symbols = tracker.universe;
-  const [selectedSymbol, setSelectedSymbol] = React.useState(symbols[0] || "");
-  const symbolTrades = tradesBySymbol[selectedSymbol] || [];
-  const symbolNet = symbolTrades.reduce((sum, t) => sum + t.net_pnl, 0);
+  const rows = tracker.universe.map(symbol => {
+    const trades = tradesBySymbol[symbol] || [];
+    return { symbol, trades, net: trades.reduce((sum, t) => sum + t.net_pnl, 0) };
+  }).sort((a, b) => a.net - b.net);  // worst first — the losses lead the story
+  const [selectedSymbol, setSelectedSymbol] = React.useState(rows[0]?.symbol || "");
+  const maxLoss = Math.max(1, ...rows.map(r => Math.max(0, -r.net)));
+  const maxGain = Math.max(1, ...rows.map(r => Math.max(0, r.net)));
+  const zeroPct = maxLoss / (maxLoss + maxGain) * 100;   // shared scale, one baseline
+  const selectedRow = rows.find(r => r.symbol === selectedSymbol) || rows[0];
+  const money = (value) => `${value < 0 ? "−" : "+"}₹${Math.abs(Math.round(value)).toLocaleString("en-IN")}`;
   return (
     <div className="card" style={{ background: "var(--surface)" }}>
-      <span className="t-eyebrow">Pick any of the 26 — every trade, step by step</span>
-      <p style={{ color: "var(--muted)", fontSize: 12, margin: "6px 0 0" }}>
-        Study view: each stock simulated independently in every clean month, so all 26 have a browsable history.
-        (The ₹10L portfolio above can only hold ~6 positions at a time — its trades are a subset of these.)
+      <span className="t-eyebrow">All 26 at a glance — click a row for its trades, step by step</span>
+      <p style={{ color: "var(--muted)", fontSize: 12, margin: "6px 0 12px" }}>
+        Study view: each stock simulated independently in every clean month.
+        (The ₹10L portfolio above holds ~6 positions at a time — its trades are a subset of these.)
+        Dots are that stock's trades in order: <span style={{ color: "var(--buy)" }}>●</span> profit ·{" "}
+        <span style={{ color: "var(--sell)" }}>●</span> loss · ○ ring = the ±10% fence broke.
       </p>
-      <div style={{ display: "flex", gap: 14, alignItems: "center", flexWrap: "wrap", margin: "10px 0 14px" }}>
-        <select value={selectedSymbol} onChange={e => setSelectedSymbol(e.target.value)}
-                style={{ background: "var(--surface-2)", color: "var(--ink)", border: "1px solid var(--line-strong)", borderRadius: 8, padding: "8px 12px", fontFamily: "var(--font-mono)", fontSize: 14 }}>
-          {symbols.map(symbol => {
-            const net = (tradesBySymbol[symbol] || []).reduce((sum, t) => sum + t.net_pnl, 0);
-            const count = (tradesBySymbol[symbol] || []).length;
-            return <option key={symbol} value={symbol}>
-              {symbol}  ({count === 0 ? "no trades" : `${net >= 0 ? "+" : "−"}₹${Math.abs(Math.round(net)).toLocaleString("en-IN")}`})
-            </option>;
-          })}
-        </select>
-        <span style={{ fontFamily: "var(--font-mono)", fontSize: 13, color: symbolNet >= 0 ? "var(--buy)" : "var(--sell)" }}>
-          {symbolTrades.length} trade{symbolTrades.length !== 1 ? "s" : ""}{symbolTrades.length > 0 && <> · net {symbolNet >= 0 ? "+" : "−"}₹{Math.abs(Math.round(symbolNet)).toLocaleString("en-IN")}</>}
-        </span>
+      <div role="listbox" aria-label="Stocks ranked by net P&L">
+        {rows.map(row => {
+          const isSelected = row.symbol === selectedSymbol;
+          const barLeftPct = row.net < 0 ? zeroPct - (-row.net / maxLoss) * zeroPct : zeroPct;
+          const barWidthPct = row.net < 0 ? (-row.net / maxLoss) * zeroPct
+                                          : (row.net / maxGain) * (100 - zeroPct);
+          return (
+            <button key={row.symbol} role="option" aria-selected={isSelected}
+                    onClick={() => setSelectedSymbol(row.symbol)}
+                    className="stock-row" data-selected={isSelected}>
+              <span style={{ fontFamily: "var(--font-mono)", fontSize: 12.5, color: isSelected ? "var(--ink)" : "var(--ink-2)", textAlign: "left" }}>{row.symbol}</span>
+              <span className="stock-dots" aria-hidden="true">
+                {row.trades.map((trade, index) => (
+                  <span key={index} title={`${trade.entry_date} → ${trade.exit_date} · ${money(trade.net_pnl)} · ${trade.exit_reason}${trade.breached ? " · fence broken" : ""}`}
+                        style={{
+                          width: 9, height: 9, borderRadius: "50%", display: "inline-block",
+                          background: trade.net_pnl > 0 ? "var(--buy)" : "var(--sell)",
+                          boxShadow: trade.breached ? "0 0 0 2px var(--surface), 0 0 0 3.5px var(--sell)" : "none",
+                        }} />
+                ))}
+              </span>
+              <span className="stock-bar-track" aria-hidden="true">
+                <span style={{ position: "absolute", left: `${zeroPct}%`, top: 0, bottom: 0, width: 1, background: "var(--line-strong)" }} />
+                <span style={{
+                  position: "absolute", top: 3, bottom: 3,
+                  left: `${barLeftPct}%`, width: `${Math.max(barWidthPct, 0.4)}%`,
+                  background: row.net < 0 ? "var(--sell)" : "var(--buy)",
+                  borderRadius: row.net < 0 ? "4px 0 0 4px" : "0 4px 4px 0",
+                  opacity: isSelected ? 1 : 0.75,
+                }} />
+              </span>
+              <span style={{ fontFamily: "var(--font-mono)", fontSize: 12.5, textAlign: "right", color: row.net < 0 ? "var(--sell)" : "var(--buy)" }}>
+                {money(row.net)}
+              </span>
+            </button>
+          );
+        })}
       </div>
-      {symbolTrades.length === 0 &&
+      <div style={{ margin: "16px 0 10px", display: "flex", alignItems: "baseline", gap: 12 }}>
+        <span className="t-eyebrow">{selectedRow.symbol} — {selectedRow.trades.length} trade{selectedRow.trades.length !== 1 ? "s" : ""}</span>
+        <span style={{ fontFamily: "var(--font-mono)", fontSize: 13, color: selectedRow.net >= 0 ? "var(--buy)" : "var(--sell)" }}>net {money(selectedRow.net)}</span>
+      </div>
+      {selectedRow.trades.length === 0 &&
         <div style={{ color: "var(--muted)", fontSize: 13 }}>No tradeable setup passed the filters for this stock in the window.</div>}
       <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-        {symbolTrades.map((trade, index) => <TradeWalkthrough key={trade.entry_date + index} trade={trade} index={index} />)}
+        {selectedRow.trades.map((trade, index) => <TradeWalkthrough key={trade.entry_date + index} trade={trade} index={index} />)}
       </div>
     </div>
   );

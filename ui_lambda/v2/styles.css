@@ -804,3 +804,29 @@ a { color: inherit; }
 @media (max-width: 900px) {
   .idea-method-grid { grid-template-columns: 1fr; }
 }
+
+/* Ranked diverging bar rows — the 26-stock field (options explorer). */
+.stock-row {
+  width: 100%;
+  display: grid;
+  grid-template-columns: 96px minmax(80px, 130px) 1fr 96px;
+  align-items: center;
+  gap: 12px;
+  background: none;
+  border: none;
+  border-top: 1px solid var(--line);
+  border-left: 2px solid transparent;
+  padding: 5px 6px;
+  cursor: pointer;
+}
+.stock-row:hover { background: var(--surface-2); }
+.stock-row[data-selected="true"] {
+  background: var(--surface-2);
+  border-left: 2px solid var(--accent);
+}
+.stock-dots { display: inline-flex; gap: 5px; align-items: center; }
+.stock-bar-track { position: relative; display: block; height: 16px; }
+@media (max-width: 700px) {
+  .stock-row { grid-template-columns: 84px 1fr 84px; }
+  .stock-dots { display: none; }
+}
