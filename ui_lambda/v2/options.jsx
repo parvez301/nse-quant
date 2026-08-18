@@ -641,13 +641,18 @@ function OptionsView() {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "var(--gap)", padding: "0 var(--gap) var(--gap)" }}>
       <OptionsRail />
-      <SectionHeader anchorId="opt-idea" number="01" title="The idea"
-        sub="The strategy from the shared notes, in plain words." />
-      <IdeaCard />
-
-      <SectionHeader anchorId="opt-method" number="02" title="What we did"
-        sub="How the idea was put on trial — honestly, with real data and real costs." />
-      <WhatWeDidCard />
+      <div className="idea-method-grid">
+        <div>
+          <SectionHeader anchorId="opt-idea" number="01" title="The idea"
+            sub="The strategy from the shared notes, in plain words." />
+          <IdeaCard />
+        </div>
+        <div>
+          <SectionHeader anchorId="opt-method" number="02" title="What we did"
+            sub="How the idea was put on trial — honestly, with real data and real costs." />
+          <WhatWeDidCard />
+        </div>
+      </div>
 
       <SectionHeader anchorId="opt-data" number="03" title="What 43 months of data said"
         sub="The verdict, the numbers behind it, and the doc's key rules put to the test." />

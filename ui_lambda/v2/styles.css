@@ -791,3 +791,16 @@ a { color: inherit; }
   .options-rail { top: 0; }
   .options-section { scroll-margin-top: 60px; }
 }
+
+/* Acts 01+02 sit side by side on wide screens; stack on narrow. */
+.idea-method-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0 var(--gap);
+  align-items: stretch;
+}
+.idea-method-grid > div { display: flex; flex-direction: column; gap: var(--gap); }
+.idea-method-grid .card { flex: 1; }
+@media (max-width: 900px) {
+  .idea-method-grid { grid-template-columns: 1fr; }
+}
