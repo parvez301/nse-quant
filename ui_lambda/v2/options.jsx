@@ -63,15 +63,58 @@ const OPTIONS_FINDINGS = {
   takeaway: "Selling strangles the DSRD way earns less than a bank FD, with tail risk attached. High win rates are marketing, not edge. This finding cost ₹0 — the same lesson bought live is priced in lakhs.",
 };
 
-function SectionHeader({ number, title, sub }) {
+function SectionHeader({ number, title, sub, anchorId }) {
   return (
-    <div style={{ display: "flex", alignItems: "baseline", gap: 14, margin: "18px 4px 2px" }}>
+    <div id={anchorId} className="options-section"
+         style={{ display: "flex", alignItems: "baseline", gap: 14, margin: "18px 4px 2px" }}>
       <span style={{ fontFamily: "var(--font-mono)", fontSize: 13, color: "var(--accent)" }}>{number}</span>
       <div>
         <div className="t-display" style={{ fontSize: 26 }}>{title}</div>
         {sub && <div style={{ color: "var(--muted)", fontSize: 13, marginTop: 2 }}>{sub}</div>}
       </div>
     </div>
+  );
+}
+
+/* Case-file rail: the argument's spine, always visible. One tap to any
+   act; the verdict chip jumps straight to the payoff. */
+const RAIL_ACTS = [
+  { id: "opt-idea",     number: "01", label: "Idea" },
+  { id: "opt-method",   number: "02", label: "Method" },
+  { id: "opt-data",     number: "03", label: "Data" },
+  { id: "opt-explore",  number: "04", label: "Try it" },
+  { id: "opt-appendix", number: "05", label: "Appendix" },
+];
+
+function OptionsRail() {
+  const [activeId, setActiveId] = React.useState(RAIL_ACTS[0].id);
+  React.useEffect(() => {
+    const onScroll = () => {
+      let current = RAIL_ACTS[0].id;
+      for (const act of RAIL_ACTS) {
+        const element = document.getElementById(act.id);
+        if (element && element.getBoundingClientRect().top <= 150) current = act.id;
+      }
+      setActiveId(current);
+    };
+    window.addEventListener("scroll", onScroll, { passive: true });
+    onScroll();
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+  const jumpTo = (targetId) => {
+    const element = document.getElementById(targetId);
+    if (element) element.scrollIntoView({ behavior: "smooth" });
+  };
+  return (
+    <nav className="options-rail" aria-label="Study sections">
+      {RAIL_ACTS.map(act => (
+        <button key={act.id} className="rail-chip" data-active={activeId === act.id}
+                onClick={() => jumpTo(act.id)}>
+          <span className="n">{act.number}</span>{act.label}
+        </button>
+      ))}
+      <button className="rail-verdict" onClick={() => jumpTo("opt-data")}>VERDICT: FAIL</button>
+    </nav>
   );
 }
 
@@ -137,7 +180,8 @@ function CriteriaCard() {
   return (
     <div className="card">
       <span className="t-eyebrow">Five pre-registered criteria — pass all or die</span>
-      <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 14 }}>
+      <div style={{ overflowX: "auto" }}>
+      <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 14, minWidth: 560 }}>
         <tbody>
           {OPTIONS_FINDINGS.criteria.map(criterion => (
             <tr key={criterion.name} style={{ borderTop: "1px solid var(--line)" }}>
@@ -156,6 +200,7 @@ function CriteriaCard() {
           ))}
         </tbody>
       </table>
+      </div>
     </div>
   );
 }
@@ -363,7 +408,7 @@ function DocAudit() {
       </p>
       <div style={{ display: "flex", flexDirection: "column", gap: 0 }}>
         {DOC_AUDIT.map(row => (
-          <div key={row.quote} style={{ borderTop: "1px solid var(--line)", padding: "14px 0", display: "grid", gridTemplateColumns: "minmax(200px, 1fr) minmax(200px, 1fr) minmax(240px, 1.3fr)", gap: 18 }}>
+          <div key={row.quote} className="doc-audit-row">
             <div>
               <div style={{ fontFamily: "var(--font-display)", fontSize: 16, color: "var(--ink)", fontStyle: "italic" }}>“{row.quote}”</div>
               <span style={{ ...VERDICT_STYLE[row.verdict], fontFamily: "var(--font-mono)", fontSize: 11, letterSpacing: "0.08em" }}>{row.verdict}</span>
@@ -478,9 +523,11 @@ function diagnoseTrade(trade) {
 }
 
 function TradeWalkthrough({ trade, index }) {
+  const [isOpen, setIsOpen] = React.useState(index === 0);
   const distancePct = (strike) => (Math.abs(strike - trade.entry_spot) / trade.entry_spot * 100).toFixed(1);
   const pnlColor = trade.net_pnl >= 0 ? "var(--buy)" : "var(--sell)";
   const money = (value) => `₹${Math.round(value).toLocaleString("en-IN")}`;
+  const diagnosis = diagnoseTrade(trade);
   const step = (label, body) => (
     <div style={{ display: "grid", gridTemplateColumns: "110px 1fr", gap: 12, padding: "8px 0", borderTop: "1px solid var(--line)" }}>
       <span className="t-eyebrow" style={{ paddingTop: 2 }}>{label}</span>
@@ -488,15 +535,23 @@ function TradeWalkthrough({ trade, index }) {
     </div>
   );
   return (
-    <div className="card" style={{ padding: 18 }}>
-      <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
-        <span style={{ fontFamily: "var(--font-mono)", fontSize: 13, color: "var(--ink)" }}>
-          Trade #{index + 1} · {trade.entry_date} → {trade.exit_date} · expiry {trade.expiry}
+    <div className="card" style={{ padding: "12px 18px" }}>
+      <button className="trade-acc-head" data-open={isOpen} onClick={() => setIsOpen(!isOpen)}
+              aria-expanded={isOpen}>
+        <span className="chev">▶</span>
+        <span style={{ fontFamily: "var(--font-mono)", fontSize: 13 }}>
+          #{index + 1} · {trade.entry_date} → {trade.exit_date}
         </span>
-        <span style={{ fontFamily: "var(--font-mono)", fontSize: 15, color: pnlColor }}>
+        <span className="exit-chip" data-kind={trade.exit_reason}>{trade.exit_reason}</span>
+        {trade.breached && <span style={{ color: "var(--sell)", fontSize: 11 }}>⚠ fence broken</span>}
+        <span style={{ color: diagnosis.tone, fontSize: 12, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: 1 }}>
+          {diagnosis.title}
+        </span>
+        <span style={{ fontFamily: "var(--font-mono)", fontSize: 15, color: pnlColor, marginLeft: "auto", flex: "none" }}>
           {trade.net_pnl >= 0 ? "+" : ""}{money(trade.net_pnl)}
         </span>
-      </div>
+      </button>
+      {isOpen && <div>
       {step("1 · Entry", <>
         Doc: enter when the new monthly contract begins, first Friday. Entered {trade.entry_date} at closing prices.
         Spot <b style={{ color: "var(--ink)" }}>₹{trade.entry_spot?.toLocaleString("en-IN")}</b>
@@ -522,15 +577,11 @@ function TradeWalkthrough({ trade, index }) {
         <b style={{ color: pnlColor }}> {money(trade.net_pnl)}</b> on {money(trade.margin)} blocked
         {" "}(<b style={{ color: pnlColor }}>{(trade.net_pnl / trade.margin * 100).toFixed(1)}%</b> on margin for the cycle).
       </>)}
-      {(() => {
-        const diagnosis = diagnoseTrade(trade);
-        return (
-          <div style={{ marginTop: 10, padding: "10px 14px", borderLeft: `3px solid ${diagnosis.tone}`, background: "var(--surface-2)", borderRadius: "0 8px 8px 0" }}>
-            <div style={{ color: diagnosis.tone, fontFamily: "var(--font-mono)", fontSize: 11, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 4 }}>{diagnosis.title}</div>
-            <div style={{ color: "var(--ink-2)", fontSize: 13 }}>{diagnosis.text}</div>
-          </div>
-        );
-      })()}
+      <div style={{ margin: "10px 0 6px", padding: "10px 14px", borderLeft: `3px solid ${diagnosis.tone}`, background: "var(--surface-2)", borderRadius: "0 8px 8px 0" }}>
+        <div style={{ color: diagnosis.tone, fontFamily: "var(--font-mono)", fontSize: 11, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 4 }}>{diagnosis.title}</div>
+        <div style={{ color: "var(--ink-2)", fontSize: 13 }}>{diagnosis.text}</div>
+      </div>
+      </div>}
     </div>
   );
 }
@@ -587,15 +638,16 @@ function OptionsView() {
   const findings = OPTIONS_FINDINGS;
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "var(--gap)", padding: "0 var(--gap) var(--gap)" }}>
-      <SectionHeader number="01" title="The idea"
+      <OptionsRail />
+      <SectionHeader anchorId="opt-idea" number="01" title="The idea"
         sub="The strategy from the shared notes, in plain words." />
       <IdeaCard />
 
-      <SectionHeader number="02" title="What we did"
+      <SectionHeader anchorId="opt-method" number="02" title="What we did"
         sub="How the idea was put on trial — honestly, with real data and real costs." />
       <WhatWeDidCard />
 
-      <SectionHeader number="03" title="What 43 months of data said"
+      <SectionHeader anchorId="opt-data" number="03" title="What 43 months of data said"
         sub="The verdict, the numbers behind it, and the doc's key rules put to the test." />
       <VerdictBanner />
       <StatRow />
@@ -615,11 +667,11 @@ function OptionsView() {
         why={findings.stops.why} />
       <AttributionCard />
 
-      <SectionHeader number="04" title="See it yourself — pick a stock"
+      <SectionHeader anchorId="opt-explore" number="04" title="See it yourself — pick a stock"
         sub="Every trade the simulation took, reconstructed step by step, each with a plain-words diagnosis of why it won or lost." />
       <StockExplorer />
 
-      <SectionHeader number="05" title="Appendix"
+      <SectionHeader anchorId="opt-appendix" number="05" title="Appendix"
         sub="Definitions, the doc audited line by line, and the fine print." />
       <GlossaryCard />
       <DocAudit />

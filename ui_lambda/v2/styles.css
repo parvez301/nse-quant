@@ -730,3 +730,64 @@ a { color: inherit; }
   .methodology { grid-template-columns: 1fr; }
   .toc { position: static; }
 }
+
+/* ── OPTIONS tab: case-file rail + exhibit responsiveness ──────── */
+.options-rail {
+  position: sticky; top: 53px; z-index: 9;
+  display: flex; align-items: center; gap: 6px;
+  padding: 8px var(--gap);
+  margin: 0 calc(-1 * var(--gap)) 2px;
+  background: color-mix(in srgb, var(--bg) 88%, transparent);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--line);
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.options-rail::-webkit-scrollbar { display: none; }
+.rail-chip {
+  flex: none;
+  display: inline-flex; align-items: baseline; gap: 6px;
+  background: none; border: none; cursor: pointer;
+  padding: 6px 10px; border-radius: var(--radius-pill);
+  color: var(--muted); font-size: 12px; font-family: var(--font-sans);
+  white-space: nowrap;
+}
+.rail-chip .n { font-family: var(--font-mono); font-size: 10px; color: var(--faint); }
+.rail-chip:hover { color: var(--ink); }
+.rail-chip[data-active="true"] { background: var(--surface-2); color: var(--ink); }
+.rail-chip[data-active="true"] .n { color: var(--accent); }
+.rail-verdict {
+  flex: none; margin-left: auto;
+  font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.1em;
+  color: var(--sell); border: 1px solid var(--sell);
+  border-radius: var(--radius-pill); padding: 4px 10px;
+  background: var(--sell-soft); cursor: pointer;
+}
+.options-section { scroll-margin-top: 108px; }
+
+.doc-audit-row {
+  display: grid;
+  grid-template-columns: minmax(200px, 1fr) minmax(200px, 1fr) minmax(240px, 1.3fr);
+  gap: 18px; border-top: 1px solid var(--line); padding: 14px 0;
+}
+
+.trade-acc-head {
+  width: 100%; display: flex; align-items: center; gap: 12px;
+  background: none; border: none; cursor: pointer; text-align: left;
+  padding: 2px 0 8px; color: var(--ink);
+}
+.trade-acc-head .chev { color: var(--faint); font-size: 11px; transition: transform 0.15s ease; }
+.trade-acc-head[data-open="true"] .chev { transform: rotate(90deg); }
+.exit-chip {
+  font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.08em;
+  text-transform: uppercase; padding: 3px 8px; border-radius: var(--radius-pill);
+}
+.exit-chip[data-kind="target"] { color: var(--buy); background: var(--buy-soft); }
+.exit-chip[data-kind="time"]   { color: var(--hold); background: var(--hold-soft); }
+.exit-chip[data-kind="stop"]   { color: var(--sell); background: var(--sell-soft); }
+
+@media (max-width: 760px) {
+  .doc-audit-row { grid-template-columns: 1fr; gap: 8px; }
+  .options-rail { top: 0; }
+  .options-section { scroll-margin-top: 60px; }
+}
