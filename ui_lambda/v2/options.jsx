@@ -10,11 +10,16 @@ const OPTIONS_FINDINGS = {
   strategy: "Monthly short strangles on NSE stock options — sell ~0.15-delta call + put ≥8% OTM, exit at 80% premium or last Tuesday before expiry. Rules from the 'DSRD' workshop doc, tested exactly as written.",
   capitalNote: "Judged at ₹5,00,000 — the doc's ₹1,00,000 cannot margin even one stock strangle (median margin ₹1,12,560).",
   criteria: [
-    { name: "Beat a fixed deposit (7% CAGR)", value: "2.7% CAGR", threshold: "> 7%", passed: false },
-    { name: "Sharpe ≥ NIFTY buy-and-hold", value: "−0.58", threshold: "≥ 0.22", passed: false },
-    { name: "Returns statistically real (t-stat > 2)", value: "−1.09", passed: false, threshold: "> 2" },
-    { name: "Max drawdown < 30%", value: "9.9%", threshold: "< 30%", passed: true },
-    { name: "Survive March-2020 replay (equity floor > 60%)", value: "96.6%", threshold: "> 60%", passed: true },
+    { name: "Beat a fixed deposit (7% CAGR)", value: "2.7% CAGR", threshold: "> 7%", passed: false,
+      hint: "An FD is the zero-effort, zero-risk alternative. Earning less than it means the risk paid negative rent." },
+    { name: "Sharpe ≥ NIFTY buy-and-hold", value: "−0.58", threshold: "≥ 0.22", passed: false,
+      hint: "Was the stress worth it versus just buying the index and sleeping? Negative Sharpe = the FD alone beat this." },
+    { name: "Returns statistically real (t-stat > 2)", value: "−1.09", passed: false, threshold: "> 2",
+      hint: "Is the average profit skill or coin-flip luck? Above +2 = confidently real. This is below zero." },
+    { name: "Max drawdown < 30%", value: "9.9%", threshold: "< 30%", passed: true,
+      hint: "Worst peak-to-valley fall of the account. Passed — mostly because the strategy sat in cash 70% of the time." },
+    { name: "Survive March-2020 replay (equity floor > 60%)", value: "96.6%", threshold: "> 60%", passed: true,
+      hint: "Stress test: replay the COVID crash month. Passed for the same reason — barely any exposure." },
   ],
   headline: [
     { label: "Total return (3.6y)", value: "+10.0%", tone: "muted" },
@@ -81,7 +86,10 @@ function CriteriaCard() {
         <tbody>
           {OPTIONS_FINDINGS.criteria.map(criterion => (
             <tr key={criterion.name} style={{ borderTop: "1px solid var(--line)" }}>
-              <td style={{ padding: "10px 8px 10px 0", color: "var(--ink-2)" }}>{criterion.name}</td>
+              <td style={{ padding: "10px 8px 10px 0" }}>
+                <div style={{ color: "var(--ink-2)" }}>{criterion.name}</div>
+                <div style={{ color: "var(--faint)", fontSize: 12, marginTop: 3, maxWidth: 460 }}>{criterion.hint}</div>
+              </td>
               <td style={{ padding: "10px 8px", fontFamily: "var(--font-mono)", color: "var(--ink)" }}>{criterion.value}</td>
               <td style={{ padding: "10px 8px", color: "var(--muted)", fontFamily: "var(--font-mono)", fontSize: 12 }}>{criterion.threshold}</td>
               <td style={{ padding: "10px 0", textAlign: "right" }}>
@@ -160,6 +168,62 @@ function AttributionCard() {
         {column("Worst five", worst, "var(--sell)")}
       </div>
       <p style={{ color: "var(--warn)", fontSize: 13, marginTop: 14 }}>{note}</p>
+    </div>
+  );
+}
+
+/* ── Metric dictionary ─────────────────────────────────────────────
+   Plain words first, then the EXACT formula this study used — so the
+   definitions can't be accused of shifting to flatter the verdict. */
+const METRIC_GLOSSARY = [
+  { term: "CAGR",
+    plain: "If the whole 3.6-year ride were flattened into identical years, this is what each year would earn — compounding included. The number to compare against an FD's 7%.",
+    exact: "(final equity ÷ starting ₹5,00,000) ^ (12 ÷ 43 months) − 1. Equity marks realized + unrealized P&L daily; capital is constant (no reinvestment), which flatters the strategy if anything." },
+  { term: "Sharpe ratio",
+    plain: "Reward per unit of stomach-churn. Take what you earned ABOVE a fixed deposit, divide by how wildly the monthly results swung. Rough scale: below 0 = the FD beat you, ~1 = good, ~2 = excellent.",
+    exact: "mean(monthly return − 7%/12) ÷ stdev(same), × √12 to annualize. Same formula applied to NIFTY's months for the benchmark (0.22)." },
+  { term: "t-statistic",
+    plain: "How confident we are the average isn't luck. Think of it as a signal-to-noise score: above +2 ≈ statistically real profits; between −2 and +2 = can't distinguish from coin flips; below −2 = reliably LOSING (the top-20 variant hit −2.78).",
+    exact: "mean monthly excess ÷ (stdev ÷ √43 months). Only judged-window months count — the 2019–22 tuning years never enter the inference." },
+  { term: "Max drawdown",
+    plain: "The worst 'peak to valley' fall — if you'd joined at the best moment and looked at the worst one, how much of the account had melted.",
+    exact: "max over time of (running-peak equity − equity) ÷ running-peak equity." },
+  { term: "Win rate & profit factor",
+    plain: "Win rate: how often trades ended green (77.8% — sounds great). Profit factor: total ₹ won ÷ total ₹ lost — the number win rate hides. Below 1.0 means losses outweigh wins regardless of how often you win.",
+    exact: "wins ÷ trades; Σ(winning net P&L) ÷ |Σ(losing net P&L)|. Full universe: 1.37. Top-20: 0.50 — ₹2 lost per ₹1 won." },
+  { term: "Delta",
+    plain: "Roughly, the market's odds the option finishes worth something. Selling a 0.15-delta option ≈ collecting rent on an ~15%-chance event.",
+    exact: "Black-Scholes N(d1) (calls) / N(d1)−1 (puts), at the entry-day settle-implied volatility, r = 7%." },
+  { term: "Implied volatility (IV)",
+    plain: "The market's forecast of how much the stock will move in a year, decoded from the option's price. 30% IV on a ₹1,000 stock ≈ 'typical year moves ±₹300'.",
+    exact: "Bisection-inverted Black-Scholes on the EOD settle price; inversions that don't converge disqualify the contract rather than guessing." },
+  { term: "1σ / 2σ bands",
+    plain: "The 'probably stays inside' range: ~68% of the time within 1σ, ~95% within 2σ — IF the market's volatility guess is right. We only sold strangles whose strikes sat outside 1σ (grade A) or 2σ (grade A+).",
+    exact: "spot × IV × √(days-to-expiry ÷ 365), doubled for 2σ." },
+  { term: "Premium & theta",
+    plain: "Premium is the rent collected upfront for selling the insurance. Theta is why it shrinks a little every quiet day — time passing is the seller's only friend.",
+    exact: "Entry premium = both legs' settle × lot size; decay observed directly in daily marks (20 of 36 trades reached the 80% decay target)." },
+  { term: "Margin",
+    plain: "The security deposit the exchange locks while your promise is open. It's why ₹1L capital can't play: the median strangle blocked ₹1.13L.",
+    exact: "SPAN proxy: worst leg = lot × max(20% spot − OTM amount, 10% spot), + 5%-of-spot add-on for the paired leg." },
+  { term: "Breach",
+    plain: "The stock crossing one of your sold strikes — the ±10% fence failing. Happened on 10 of 36 trades; those trades averaged −₹10,587.",
+    exact: "Any daily spot mark ≥ call strike or ≤ put strike during the trade's life." },
+];
+
+function GlossaryCard() {
+  return (
+    <div className="card">
+      <span className="t-eyebrow">Dictionary — what these numbers mean (and exactly how we computed them)</span>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: "16px 28px", marginTop: 4 }}>
+        {METRIC_GLOSSARY.map(entry => (
+          <div key={entry.term} style={{ borderTop: "1px solid var(--line)", paddingTop: 10 }}>
+            <div style={{ fontFamily: "var(--font-mono)", fontSize: 13, color: "var(--accent)", letterSpacing: "0.04em", marginBottom: 4 }}>{entry.term}</div>
+            <div style={{ color: "var(--ink-2)", fontSize: 13, marginBottom: 6 }}>{entry.plain}</div>
+            <div style={{ color: "var(--faint)", fontSize: 12 }}><span style={{ color: "var(--muted)" }}>Our definition:</span> {entry.exact}</div>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
@@ -368,6 +432,7 @@ function OptionsView() {
         rows={findings.stops.rows}
         why={findings.stops.why} />
       <AttributionCard />
+      <GlossaryCard />
       <DocAudit />
       <StockExplorer />
       <div className="card">
