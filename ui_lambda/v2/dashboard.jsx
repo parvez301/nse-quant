@@ -69,6 +69,7 @@ function Topbar({ tab, setTab, lastRun, halt }) {
         <button className="nav-tab" data-active={tab === "dashboard"} onClick={() => setTab("dashboard")}>Portfolio</button>
         <button className="nav-tab" data-active={tab === "explorer"} onClick={() => setTab("explorer")}>Lab</button>
         <button className="nav-tab" data-active={tab === "methodology"} onClick={() => setTab("methodology")}>Method</button>
+        <button className="nav-tab" data-active={tab === "options"} onClick={() => setTab("options")}>Options</button>
       </div>
       <div className="topbar-right">
         <span className="system-pill" data-state={halt?.halted ? "halt" : "ok"}>

@@ -1,4 +1,4 @@
-/* global React, ReactDOM, Dashboard, Topbar, TrustStrip, MethodologyView, ExplorerProView, TodayView, useTweaks, TweaksPanel, TweakSection, TweakRadio, TweakSelect, loadState */
+/* global React, ReactDOM, Dashboard, Topbar, TrustStrip, MethodologyView, ExplorerProView, TodayView, OptionsView, useTweaks, TweaksPanel, TweakSection, TweakRadio, TweakSelect, loadState */
 
 const { useState, useEffect } = React;
 
@@ -54,6 +54,7 @@ function App() {
       {tab === "dashboard"   && <Dashboard data={state} />}
       {tab === "explorer"    && <ExplorerProView state={state} />}
       {tab === "methodology" && <MethodologyView state={state} />}
+      {tab === "options"     && <OptionsView />}
 
       <TweaksPanel title="Tweaks">
         <TweakSection title="Direction">

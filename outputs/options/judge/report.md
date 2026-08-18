@@ -72,3 +72,21 @@ Worst:
 
 - median trade margin: ₹112,560
 - ₹1L supports a single strangle: False
+
+## Variant: top-20 market-cap universe only (the doc's "hippo stocks" rule)
+
+Rerun of the judged window restricted to the 20 largest F&O names
+(RELIANCE, HDFCBANK, TCS, ... TATAMOTORS; list in top20_stats.json):
+
+- total_return: **-13.2%** (vs +10.0% full universe)
+- cagr: -3.9%
+- sharpe: -1.47
+- t_stat_excess: **-2.78 — statistically significant LOSSES**
+- win_rate: 79.2% (the illusion survives; the economics don't)
+- profit_factor: 0.50
+- max_drawdown: 20.1%
+- n_trades: 24
+
+Large caps carry thin premiums at 8%+ OTM but still gap on results and
+macro shocks; the rare loss dwarfs the accumulated rent. The doc's
+"trade only calm giants" rule makes the strategy WORSE, not safer.

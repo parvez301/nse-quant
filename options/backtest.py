@@ -150,7 +150,8 @@ class StranglePosition:
 
 
 def _entry_candidates(cycle: dict, archive_root: pathlib.Path, close_store,
-                      blackout_ranges, use_earnings_filter: bool) -> list[dict]:
+                      blackout_ranges, use_earnings_filter: bool,
+                      universe: set[str] | None = None) -> list[dict]:
     entry_date = datetime.date.fromisoformat(cycle["entry_date"])
     expiry_date = datetime.date.fromisoformat(cycle["expiry"])
     if in_blackout(entry_date, expiry_date, blackout_ranges):
@@ -161,6 +162,8 @@ def _entry_candidates(cycle: dict, archive_root: pathlib.Path, close_store,
     by_symbol = _load_day_by_symbol(cycle["entry_date"], archive_root)
     raw_candidates = []
     for symbol, symbol_rows in by_symbol.items():
+        if universe is not None and symbol not in universe:
+            continue
         spot = spot_for_symbol(symbol_rows)
         if not spot:
             continue
@@ -203,9 +206,11 @@ def _entry_candidates(cycle: dict, archive_root: pathlib.Path, close_store,
 def run_cycle(cycle: dict, archive_root: pathlib.Path, close_store,
               blackout_ranges, stop_multiplier: float | None,
               use_earnings_filter: bool, capital: float,
-              score_floor: float = SCORE_FLOOR) -> list[dict]:
+              score_floor: float = SCORE_FLOOR,
+              universe: set[str] | None = None) -> list[dict]:
     candidates = _entry_candidates(cycle, archive_root, close_store,
-                                   blackout_ranges, use_earnings_filter)
+                                   blackout_ranges, use_earnings_filter,
+                                   universe=universe)
     margin_budget = MARGIN_BUDGET_FRACTION * capital
     positions: list[StranglePosition] = []
     margin_used = 0.0
@@ -258,7 +263,8 @@ def run_backtest(archive_root: pathlib.Path, close_store, start_iso: str,
                  end_iso: str, stop_key: str, use_earnings_filter: bool,
                  capital: float, blackouts_path: pathlib.Path,
                  expiry_dates: list[str] | None = None,
-                 score_floor: float = SCORE_FLOOR) -> dict:
+                 score_floor: float = SCORE_FLOOR,
+                 universe: set[str] | None = None) -> dict:
     stop_multiplier = STOP_MULTIPLIERS[stop_key]
     blackout_ranges = load_blackouts(blackouts_path)
     trading_days = _archive_days(archive_root, start_iso, end_iso)
@@ -269,7 +275,8 @@ def run_backtest(archive_root: pathlib.Path, close_store, start_iso: str,
     for cycle in cycles:
         all_trades.extend(run_cycle(cycle, archive_root, close_store,
                                     blackout_ranges, stop_multiplier,
-                                    use_earnings_filter, capital, score_floor))
+                                    use_earnings_filter, capital, score_floor,
+                                    universe=universe))
     equity_curve = _equity_curve(all_trades, trading_days, capital)
     return {"trades": all_trades, "equity_curve": equity_curve,
             "monthly_returns": _monthly_returns(equity_curve),

@@ -130,3 +130,13 @@ def test_monthly_expiry_detection_ignores_thin_expiries(tmp_path):
     assert detected == ["2024-08-29"]
     assert monthly_expiry_dates(archive_root, "2024-08-01", "2024-08-31",
                                 min_shared_symbols=50) == []
+
+
+def test_universe_restriction_excludes_other_symbols(tmp_path):
+    archive_root = _build_archive(tmp_path)
+    result = run_backtest(archive_root, _NoCloses(), "2024-08-01", "2024-08-31",
+                          stop_key="1:1", use_earnings_filter=False,
+                          capital=500_000.0, blackouts_path=BLACKOUTS,
+                          expiry_dates=EXPIRIES, score_floor=0.0,
+                          universe={"FLAT"})
+    assert {t["symbol"] for t in result["trades"]} == {"FLAT"}
