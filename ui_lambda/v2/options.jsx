@@ -225,12 +225,18 @@ function StockExplorer({ tracker }) {
     const trades = tradesBySymbol[symbol] || [];
     return { symbol, trades, net: trades.reduce((sum, t) => sum + t.net_pnl, 0) };
   }).sort((a, b) => a.net - b.net);  // worst first — the losses lead the story
-  const [selectedSymbol, setSelectedSymbol] = React.useState(rows[0]?.symbol || "");
+  const [selectedSymbol, setSelectedSymbol] = React.useState(null);
   const maxLoss = Math.max(1, ...rows.map(r => Math.max(0, -r.net)));
   const maxGain = Math.max(1, ...rows.map(r => Math.max(0, r.net)));
   const zeroPct = maxLoss / (maxLoss + maxGain) * 100;   // shared scale, one baseline
-  const selectedRow = rows.find(r => r.symbol === selectedSymbol) || rows[0];
+  const selectedRow = rows.find(r => r.symbol === selectedSymbol) || null;
   const money = (value) => `${value < 0 ? "−" : "+"}₹${Math.abs(Math.round(value)).toLocaleString("en-IN")}`;
+  React.useEffect(() => {
+    if (!selectedRow) return;
+    const onKey = (event) => { if (event.key === "Escape") setSelectedSymbol(null); };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [selectedRow]);
   return (
     <div className="card" style={{ background: "var(--surface)" }}>
       <span className="t-eyebrow">All 26 at a glance — click a row for its trades, step by step</span>
@@ -248,7 +254,7 @@ function StockExplorer({ tracker }) {
                                           : (row.net / maxGain) * (100 - zeroPct);
           return (
             <button key={row.symbol} role="option" aria-selected={isSelected}
-                    onClick={() => setSelectedSymbol(row.symbol)}
+                    onClick={() => setSelectedSymbol(isSelected ? null : row.symbol)}
                     className="stock-row" data-selected={isSelected}>
               <span style={{ fontFamily: "var(--font-mono)", fontSize: 12.5, color: isSelected ? "var(--ink)" : "var(--ink-2)", textAlign: "left" }}>{row.symbol}</span>
               <span className="stock-dots" aria-hidden="true">
@@ -278,15 +284,26 @@ function StockExplorer({ tracker }) {
           );
         })}
       </div>
-      <div style={{ margin: "16px 0 10px", display: "flex", alignItems: "baseline", gap: 12 }}>
-        <span className="t-eyebrow">{selectedRow.symbol} — {selectedRow.trades.length} trade{selectedRow.trades.length !== 1 ? "s" : ""}</span>
-        <span style={{ fontFamily: "var(--font-mono)", fontSize: 13, color: selectedRow.net >= 0 ? "var(--buy)" : "var(--sell)" }}>net {money(selectedRow.net)}</span>
-      </div>
-      {selectedRow.trades.length === 0 &&
-        <div style={{ color: "var(--muted)", fontSize: 13 }}>No tradeable setup passed the filters for this stock in the window.</div>}
-      <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-        {selectedRow.trades.map((trade, index) => <TradeWalkthrough key={trade.entry_date + index} trade={trade} index={index} />)}
-      </div>
+      {selectedRow && <>
+        <div className="trade-drawer-backdrop" onClick={() => setSelectedSymbol(null)} />
+        <aside className="trade-drawer" role="dialog" aria-label={`${selectedRow.symbol} trades`}>
+          <div className="trade-drawer-head">
+            <span className="t-display" style={{ fontSize: 24 }}>{selectedRow.symbol}</span>
+            <span style={{ fontFamily: "var(--font-mono)", fontSize: 13, color: "var(--muted)" }}>
+              {selectedRow.trades.length} trade{selectedRow.trades.length !== 1 ? "s" : ""}
+            </span>
+            <span style={{ fontFamily: "var(--font-mono)", fontSize: 15, color: selectedRow.net >= 0 ? "var(--buy)" : "var(--sell)" }}>
+              net {money(selectedRow.net)}
+            </span>
+            <button className="trade-drawer-close" onClick={() => setSelectedSymbol(null)}>Close · esc</button>
+          </div>
+          {selectedRow.trades.length === 0 &&
+            <div style={{ color: "var(--muted)", fontSize: 13 }}>No tradeable setup passed the filters for this stock in the window.</div>}
+          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+            {selectedRow.trades.map((trade, index) => <TradeWalkthrough key={trade.entry_date + index} trade={trade} index={index} />)}
+          </div>
+        </aside>
+      </>}
     </div>
   );
 }
