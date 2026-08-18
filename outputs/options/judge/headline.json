@@ -1,0 +1,152 @@
+{
+  "generated_at": "2026-08-18",
+  "verdict": "FAIL",
+  "criteria": {
+    "cagr_beats_fd_7pct": {
+      "value": 0.027059790807216544,
+      "threshold": 0.07,
+      "passed": false
+    },
+    "sharpe_beats_nifty": {
+      "value": -0.5753114704251896,
+      "threshold": 0.21969561150552744,
+      "passed": false
+    },
+    "max_drawdown_below_30pct": {
+      "value": 0.09878268253740194,
+      "threshold": 0.3,
+      "passed": true
+    },
+    "covid_2020_equity_floor_above_60pct": {
+      "value": 0.966146137868,
+      "threshold": 0.6,
+      "passed": true
+    },
+    "monthly_excess_tstat_above_2": {
+      "value": -1.089047036944079,
+      "threshold": 2.0,
+      "passed": false
+    }
+  },
+  "selected_stop": "none",
+  "judged_stats": {
+    "n_months": 43,
+    "n_trades": 36,
+    "total_return": 0.10040195959200005,
+    "max_drawdown": 0.09878268253740194,
+    "equity_floor_fraction": 0.946987394449,
+    "cagr": 0.027059790807216544,
+    "mean_monthly_return": 0.00243876928287766,
+    "sharpe": -0.5753114704251896,
+    "t_stat_excess": -1.089047036944079,
+    "sortino": -0.659544380305995,
+    "win_rate": 0.7777777777777778,
+    "profit_factor": 1.3733152530074302,
+    "breach_rate": 0.2777777777777778,
+    "median_margin": 112560.0
+  },
+  "judged_no_earnings_stats": {
+    "n_months": 43,
+    "n_trades": 36,
+    "total_return": 0.10040195959200005,
+    "max_drawdown": 0.09878268253740194,
+    "equity_floor_fraction": 0.946987394449,
+    "cagr": 0.027059790807216544,
+    "mean_monthly_return": 0.00243876928287766,
+    "sharpe": -0.5753114704251896,
+    "t_stat_excess": -1.089047036944079,
+    "sortino": -0.659544380305995,
+    "win_rate": 0.7777777777777778,
+    "profit_factor": 1.3733152530074302,
+    "breach_rate": 0.2777777777777778,
+    "median_margin": 112560.0
+  },
+  "tuning_stats": {
+    "1:1": {
+      "n_months": 47,
+      "n_trades": 45,
+      "total_return": 0.024513587017999994,
+      "max_drawdown": 0.21461220748200568,
+      "equity_floor_fraction": 0.904001917801,
+      "cagr": 0.00620246266546709,
+      "mean_monthly_return": 0.00101100307654775,
+      "sharpe": -0.5243972292296198,
+      "t_stat_excess": -1.0378120148945578,
+      "sortino": -0.698711773831264,
+      "win_rate": 0.6666666666666666,
+      "profit_factor": 1.042679373546417,
+      "breach_rate": 0.15555555555555556,
+      "median_margin": 112608.0
+    },
+    "1:1.5": {
+      "n_months": 47,
+      "n_trades": 45,
+      "total_return": 0.03389201548999998,
+      "max_drawdown": 0.20547481065226675,
+      "equity_floor_fraction": 0.892414584041,
+      "cagr": 0.008546185144998164,
+      "mean_monthly_return": 0.0013453519637125135,
+      "sharpe": -0.4338079362528824,
+      "t_stat_excess": -0.8585306391897772,
+      "sortino": -0.5485101262671719,
+      "win_rate": 0.6888888888888889,
+      "profit_factor": 1.059825788527132,
+      "breach_rate": 0.24444444444444444,
+      "median_margin": 112608.0
+    },
+    "1:2": {
+      "n_months": 47,
+      "n_trades": 45,
+      "total_return": 0.038262342532000115,
+      "max_drawdown": 0.19285369102393002,
+      "equity_floor_fraction": 0.884571210835,
+      "cagr": 0.009632949876440033,
+      "mean_monthly_return": 0.0016991962041193005,
+      "sharpe": -0.33944470636010954,
+      "t_stat_excess": -0.6717804271590128,
+      "sortino": -0.4150457463820229,
+      "win_rate": 0.7111111111111111,
+      "profit_factor": 1.0657012942196762,
+      "breach_rate": 0.26666666666666666,
+      "median_margin": 112608.0
+    },
+    "none": {
+      "n_months": 47,
+      "n_trades": 45,
+      "total_return": 0.17647861462699987,
+      "max_drawdown": 0.2048028406181419,
+      "equity_floor_fraction": 0.91053598393,
+      "cagr": 0.042368926340619284,
+      "mean_monthly_return": 0.004330532231026607,
+      "sharpe": -0.1266282784650277,
+      "t_stat_excess": -0.2506045827310726,
+      "sortino": -0.1567080841441428,
+      "win_rate": 0.7555555555555555,
+      "profit_factor": 1.379830882935832,
+      "breach_rate": 0.3111111111111111,
+      "median_margin": 112608.0
+    }
+  },
+  "covid_floor_fraction": 0.966146137868,
+  "nifty_sharpe_judged_window": 0.21969561150552744,
+  "finding_0_capital_feasibility": {
+    "median_trade_margin": 112560.0,
+    "one_lakh_supports_a_single_strangle": false,
+    "note": "spec amended: judge capital Rs5L; the doc's Rs1L cannot margin a typical stock strangle if this flag is false"
+  },
+  "per_year_judged": {
+    "2023": -0.024034124242000132,
+    "2024": 0.06087482296023605,
+    "2025": 8.817981704201117e-05,
+    "2026": 0.06270882008171874
+  },
+  "config": {
+    "stop": "none",
+    "earnings_filter": true,
+    "capital": 500000.0,
+    "start": "2023-01-01",
+    "end": "2026-08-18",
+    "cycles": 43,
+    "score_floor": 75.0
+  }
+}
