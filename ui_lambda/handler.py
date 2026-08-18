@@ -363,6 +363,12 @@ def handler(event, context):
     if not path.startswith("/api/"):
         return _resp(404, {"error": "not found"})
 
+    if path == "/api/options/clean-tracker":
+        raw = _get_object("outputs/options/clean_tracker.json")
+        if raw is None:
+            return _resp(200, {"available": False})
+        return _resp(200, json.loads(raw))
+
     if path == "/api/last_run":
         raw = _get_object("outputs/last_run.json")
         if raw is None:

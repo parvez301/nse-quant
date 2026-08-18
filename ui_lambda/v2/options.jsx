@@ -527,6 +527,85 @@ function UnionStudyCard() {
   );
 }
 
+/* ── LIVE: the clean-26 tracker (recomputed every 4 hours) ──────── */
+function LiveCleanCard() {
+  const [tracker, setTracker] = React.useState(null);
+  React.useEffect(() => {
+    fetch("/api/options/clean-tracker").then(r => r.json())
+      .then(payload => { if (payload && payload.generated_at_utc) setTracker(payload); })
+      .catch(() => {});
+  }, []);
+  if (!tracker) return null;
+  const money = (value) => `${value < 0 ? "−" : "+"}₹${Math.abs(Math.round(value)).toLocaleString("en-IN")}`;
+  const windowEvents = tracker.excluded_events.filter(e => e.in_window);
+  const cycles = tracker.cycles;
+  return (
+    <div className="card" style={{ borderColor: "var(--line-strong)" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: 8 }}>
+        <span className="t-eyebrow">
+          <span style={{ color: "var(--accent)" }}>● live</span> · the clean-26 tracker — trailing 24 months, recomputed every 4 hours
+        </span>
+        <span style={{ fontFamily: "var(--font-mono)", fontSize: 11, color: "var(--faint)" }}>
+          updated {tracker.generated_at_utc} · data through {tracker.last_archive_day}
+        </span>
+      </div>
+      <p style={{ color: "var(--ink-2)", fontSize: 14, maxWidth: 840, margin: "8px 0 12px" }}>
+        The strictest configuration, tracked continuously: only these {tracker.universe.length} large caps, ₹{(tracker.capital / 100000).toFixed(0)} lakh,
+        window {tracker.window.start} → {tracker.window.end}, every war, pandemic, shock, Budget, election, and
+        quarterly-results range excluded. Of {cycles.total} monthly cycles, {cycles.macro} fell to macro events and{" "}
+        {cycles.earnings} to results season — <b style={{ color: "var(--ink)" }}>{cycles.clean} were tradeable</b>.
+      </p>
+      <div style={{ display: "flex", gap: 28, flexWrap: "wrap", marginBottom: 14 }}>
+        {[["₹10L by the rulebook is now", money(tracker.rules_final_equity - tracker.capital),
+           tracker.rules_final_equity >= tracker.capital ? "var(--buy)" : "var(--sell)",
+           `₹${tracker.rules_final_equity.toLocaleString("en-IN")} · ${tracker.rules_stats.n_trades} trades · ${(tracker.rules_stats.win_rate * 100 || 0).toFixed(0)}% wins`],
+          ["₹10L filling the margin is now", money(tracker.fill_final_equity - tracker.capital),
+           tracker.fill_final_equity >= tracker.capital ? "var(--buy)" : "var(--sell)",
+           `₹${tracker.fill_final_equity.toLocaleString("en-IN")} · ${tracker.fill_stats.n_trades} trades · ${(tracker.fill_stats.win_rate * 100 || 0).toFixed(0)}% wins`],
+          ["Fence breached", `${((tracker.fill_stats.breach_rate || 0) * 100).toFixed(0)}%`, "var(--sell)",
+           "of trades — even in 'clean' months"],
+        ].map(([label, value, tone, note]) => (
+          <div key={label}>
+            <div className="t-eyebrow">{label}</div>
+            <div style={{ fontFamily: "var(--font-mono)", fontSize: 24, color: tone }}>{value}</div>
+            <div style={{ color: "var(--faint)", fontSize: 11 }}>{note}</div>
+          </div>
+        ))}
+      </div>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: 24 }}>
+        <div>
+          <div className="t-eyebrow" style={{ marginBottom: 8 }}>Events & ranges excluded (in window)</div>
+          {windowEvents.map(event => (
+            <div key={event.start} style={{ display: "flex", justifyContent: "space-between", gap: 12, borderTop: "1px solid var(--line)", padding: "5px 0", fontSize: 12 }}>
+              <span style={{ color: "var(--ink-2)" }}>{event.reason}</span>
+              <span style={{ fontFamily: "var(--font-mono)", color: "var(--faint)", flex: "none" }}>{event.start} → {event.end}</span>
+            </div>
+          ))}
+          <div style={{ color: "var(--faint)", fontSize: 11, marginTop: 6 }}>
+            Plus every quarterly-results window (SEBI 45-day rule) — {cycles.earnings} cycles.
+          </div>
+        </div>
+        <div>
+          <div className="t-eyebrow" style={{ marginBottom: 8 }}>The 26, tracked (fill mode, net P&L)</div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0 18px" }}>
+            {[...tracker.per_stock].sort((a, b) => a.net_pnl - b.net_pnl).map(row => (
+              <div key={row.symbol} style={{ display: "flex", justifyContent: "space-between", borderTop: "1px solid var(--line)", padding: "4px 0", fontFamily: "var(--font-mono)", fontSize: 12 }}>
+                <span style={{ color: "var(--ink-2)" }}>{row.symbol}</span>
+                <span style={{ color: row.net_pnl > 0 ? "var(--buy)" : row.net_pnl < 0 ? "var(--sell)" : "var(--faint)" }}>
+                  {row.trades === 0 ? "no trades" : money(row.net_pnl)}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+      <p style={{ color: "var(--faint)", fontSize: 11, marginTop: 12 }}>
+        NSE publishes options settle data once each evening — the tracker recomputes every 4 hours and moves when a new trading day lands.
+      </p>
+    </div>
+  );
+}
+
 /* ── Per-stock simulation explorer ────────────────────────────────
    Reads window.OPTIONS_DATA (generated by
    examples/nse_options_export_ui_data.py). */
@@ -713,6 +792,7 @@ function OptionsView() {
         why={findings.top20.why} />
       <SheetStudyCard />
       <UnionStudyCard />
+      <LiveCleanCard />
       <ComparisonCard
         title="Stop-losses made everything worse"
         intro={findings.stops.intro}

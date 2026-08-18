@@ -31,11 +31,15 @@ RUN pip install --no-cache-dir --upgrade pip \
     && rm -rf /var/lib/apt/lists/* /root/.cache
 
 COPY examples /app/examples
+COPY options /app/options
+COPY data/options_blackouts.yaml data/options_blackouts_extended.yaml /app/data/
 COPY outputs/nse_baseline_750_long /app/model_seed/nse_baseline_750_long
 COPY outputs/pit_universe.parquet /app/model_seed/pit_universe.parquet
 COPY docker/run_daily_cloud.sh /app/run_daily_cloud.sh
 COPY docker/run_postclose_cloud.sh /app/run_postclose_cloud.sh
+COPY docker/run_options_tracker_cloud.sh /app/run_options_tracker_cloud.sh
 RUN chmod +x /app/run_daily_cloud.sh /app/run_postclose_cloud.sh \
+        /app/run_options_tracker_cloud.sh \
         /app/examples/run_daily.sh /app/examples/run_postclose.sh
 
 ENV MODEL_DIR=outputs/nse_baseline_750_long \

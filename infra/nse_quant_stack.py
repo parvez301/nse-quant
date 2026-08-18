@@ -186,6 +186,28 @@ class NseQuantStack(Stack):
             )
         )
 
+        # Every 4 hours — clean-26 options tracker (user-requested cadence;
+        # NSE data changes once daily, intra-day runs refresh the timestamp).
+        optionsTrackerRule = events.Rule(
+            self,
+            "OptionsTrackerCron",
+            schedule=events.Schedule.rate(Duration.hours(4)),
+        )
+        optionsTrackerRule.add_target(
+            events_targets.EcsTask(
+                cluster=cluster,
+                task_definition=taskDefinition,
+                assign_public_ip=True,
+                subnet_selection=ec2.SubnetSelection(subnet_type=ec2.SubnetType.PUBLIC),
+                container_overrides=[
+                    events_targets.ContainerOverride(
+                        container_name="Daily",
+                        command=["/app/run_options_tracker_cloud.sh"],
+                    )
+                ],
+            )
+        )
+
         # Catch infrastructure failures (image pull, ENI alloc, OOM kill) — cases
         # where the script never reached its own SNS notify path. Successful runs
         # exit with stopCode=EssentialContainerExited which we deliberately ignore.
