@@ -1,0 +1,22 @@
+# EXTENDED macro-event blackout calendar for the "clean 24-month" test.
+# Superset of options_blackouts.yaml: adds wars, pandemics, and global
+# market shocks. Kept separate so earlier exhibits stay reproducible.
+blackouts:
+  - {start: 2019-02-01, end: 2019-02-03, reason: "Interim Budget 2019"}
+  - {start: 2019-04-11, end: 2019-05-23, reason: "General election 2019"}
+  - {start: 2019-07-05, end: 2019-07-07, reason: "Union Budget Jul 2019"}
+  - {start: 2020-02-01, end: 2020-06-30, reason: "COVID-19 crash + lockdowns"}
+  - {start: 2021-02-01, end: 2021-02-03, reason: "Union Budget 2021"}
+  - {start: 2021-04-05, end: 2021-05-31, reason: "COVID second wave (Delta)"}
+  - {start: 2022-02-01, end: 2022-02-03, reason: "Union Budget 2022"}
+  - {start: 2022-02-24, end: 2022-03-31, reason: "Russia-Ukraine invasion shock"}
+  - {start: 2023-02-01, end: 2023-02-03, reason: "Union Budget 2023"}
+  - {start: 2023-10-07, end: 2023-10-31, reason: "Israel-Hamas war outbreak"}
+  - {start: 2024-02-01, end: 2024-02-03, reason: "Interim Budget 2024"}
+  - {start: 2024-04-19, end: 2024-06-04, reason: "General election 2024"}
+  - {start: 2024-07-23, end: 2024-07-25, reason: "Union Budget Jul 2024"}
+  - {start: 2025-02-01, end: 2025-02-03, reason: "Union Budget 2025"}
+  - {start: 2025-04-02, end: 2025-04-11, reason: "US tariff shock, global selloff"}
+  - {start: 2025-05-01, end: 2025-05-15, reason: "India-Pakistan conflict (Op Sindoor)"}
+  - {start: 2025-06-12, end: 2025-06-25, reason: "Israel-Iran conflict, oil shock"}
+  - {start: 2026-02-01, end: 2026-02-03, reason: "Union Budget 2026"}
