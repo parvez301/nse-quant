@@ -63,6 +63,61 @@ const OPTIONS_FINDINGS = {
   takeaway: "Selling strangles the DSRD way earns less than a bank FD, with tail risk attached. High win rates are marketing, not edge. This finding cost ₹0 — the same lesson bought live is priced in lakhs.",
 };
 
+function SectionHeader({ number, title, sub }) {
+  return (
+    <div style={{ display: "flex", alignItems: "baseline", gap: 14, margin: "18px 4px 2px" }}>
+      <span style={{ fontFamily: "var(--font-mono)", fontSize: 13, color: "var(--accent)" }}>{number}</span>
+      <div>
+        <div className="t-display" style={{ fontSize: 26 }}>{title}</div>
+        {sub && <div style={{ color: "var(--muted)", fontSize: 13, marginTop: 2 }}>{sub}</div>}
+      </div>
+    </div>
+  );
+}
+
+function IdeaCard() {
+  return (
+    <div className="card">
+      <span className="t-eyebrow">The strategy, as shared (no math needed)</span>
+      <p style={{ color: "var(--ink-2)", fontSize: 14, maxWidth: 780 }}>
+        Be the insurance seller. Every month, pick a calm large-cap stock and sell two promises:
+        one that pays out if the stock <b style={{ color: "var(--ink)" }}>rises more than ~10%</b>, one if it{" "}
+        <b style={{ color: "var(--ink)" }}>falls more than ~10%</b> (a "short strangle"). Collect both fees upfront.
+        If the stock stays inside that ±10% fence for the month — which calm stocks usually do — both promises
+        expire worthless and the fees are pure profit. Rules to stay safe: only big liquid "hippo" stocks,
+        never in a results month, never around elections or the Budget, take profit once 80–90% of the fee is
+        earned, square off before expiry, keep a stop-loss. Expected: 15–30% a year of steady rent.
+      </p>
+      <p style={{ color: "var(--muted)", fontSize: 13, marginTop: 8 }}>
+        It's a genuinely popular idea — the "volatility risk premium" is real, and prop desks do harvest it.
+        The question is whether it survives <i>retail costs, retail capital, and the occasional storm</i>. That's testable.
+      </p>
+    </div>
+  );
+}
+
+function WhatWeDidCard() {
+  const steps = [
+    ["1 · We bought the history books",
+     "Every NSE stock-option price, every trading day, 2019 → Aug 2026 (1,877 days) straight from NSE's own archives — including the COVID crash. Dead companies stay in; nothing is quietly forgotten."],
+    ["2 · We coded the rules exactly as written",
+     "A program plays the strategy with no feelings and no hindsight: same entry day, same ±10% strikes, same profit-taking and square-off rules, on paper money — charged full real-world costs (brokerage, STT, GST, exchange fees, slippage) on every leg."],
+    ["3 · We wrote the pass marks BEFORE the exam",
+     "Five pass/fail criteria were fixed in advance — beat a fixed deposit, beat lazy NIFTY, real (not lucky) profits, limited worst-case fall, survive March 2020. And to prevent grading our own homework, any tuning happened only on 2019–2022; the verdict below comes exclusively from 2023 onwards, which the tuning never saw."],
+  ];
+  return (
+    <div className="card">
+      <span className="t-eyebrow">Three steps, no jargon</span>
+      {steps.map(([title, body]) => (
+        <div key={title} style={{ borderTop: "1px solid var(--line)", padding: "10px 0" }}>
+          <div style={{ color: "var(--ink)", fontSize: 14, marginBottom: 3 }}>{title}</div>
+          <div style={{ color: "var(--muted)", fontSize: 13, maxWidth: 820 }}>{body}</div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function VerdictBanner() {
   return (
     <div className="card" style={{ borderColor: "var(--sell)", background: "var(--sell-soft)" }}>
@@ -331,6 +386,36 @@ const EXIT_NARRATIVE = {
   stop:   "Stop-loss fired: combined premium blew past the stop multiple — bought back in a stressed market (double slippage charged).",
 };
 
+function diagnoseTrade(trade) {
+  const money = (value) => `₹${Math.abs(Math.round(value)).toLocaleString("en-IN")}`;
+  const spotMovePct = trade.exit_spot && trade.entry_spot
+    ? ((trade.exit_spot - trade.entry_spot) / trade.entry_spot * 100) : null;
+  const moveText = spotMovePct == null ? "" :
+    `The stock ${spotMovePct >= 0 ? "rose" : "fell"} ${Math.abs(spotMovePct).toFixed(1)}% over the trade (₹${trade.entry_spot?.toLocaleString("en-IN")} → ₹${trade.exit_spot?.toLocaleString("en-IN")}). `;
+  const callBlowup = trade.exit_call_per_share / Math.max(trade.entry_call_per_share, 0.01);
+  const putBlowup = trade.exit_put_per_share / Math.max(trade.entry_put_per_share, 0.01);
+  const won = trade.net_pnl > 0;
+
+  if (won && trade.exit_reason === "target") {
+    return { tone: "var(--buy)", title: "Why it won",
+      text: moveText + "It stayed comfortably inside the fence, so both promises lost value day after day (time decay). We bought them back at 20% of what we sold them for and pocketed the difference — the exact quiet month the strategy is built for. Note the size of the win though: " + money(trade.net_pnl) + " on " + money(trade.margin) + " blocked for weeks." };
+  }
+  if (won && trade.exit_reason === "time") {
+    return { tone: "var(--buy)", title: "Why it won (barely)",
+      text: moveText + "The stock behaved, but premiums decayed too slowly to hit the 80% target, so the last-Tuesday square-off closed it with partial rent. Wins like this are the strategy's ceiling — small, slow, and capped." };
+  }
+  if (trade.breached) {
+    const side = callBlowup > putBlowup ? "call" : "put";
+    const blowup = Math.max(callBlowup, putBlowup);
+    const entry_leg = side === "call" ? trade.entry_call_per_share : trade.entry_put_per_share;
+    const exit_leg = side === "call" ? trade.exit_call_per_share : trade.exit_put_per_share;
+    return { tone: "var(--sell)", title: "Why it lost — the fence failed",
+      text: moveText + `That's straight through the sold ${side} strike — the ±10% "fence" the doc calls safe. The ${side} we sold for ₹${entry_leg?.toFixed(2)}/share ballooned to ₹${exit_leg?.toFixed(2)} (${blowup.toFixed(0)}×), and buying it back cost far more than all the rent collected. This is THE failure mode of option selling: the doc's rules (calm stock, RSI, sigma bands, score ${trade.score?.toFixed(0)}/100) all approved this trade — none of them can see a gap coming.` };
+  }
+  return { tone: "var(--sell)", title: "Why it lost",
+    text: moveText + "The stock never actually crossed the fence — but it drifted close enough (or volatility rose enough) that the promises got MORE expensive instead of decaying. The square-off deadline arrived with buy-back prices above what we collected. You can lose without the fence breaking; premium prices move on fear, not just on price." };
+}
+
 function TradeWalkthrough({ trade, index }) {
   const distancePct = (strike) => (Math.abs(strike - trade.entry_spot) / trade.entry_spot * 100).toFixed(1);
   const pnlColor = trade.net_pnl >= 0 ? "var(--buy)" : "var(--sell)";
@@ -376,6 +461,15 @@ function TradeWalkthrough({ trade, index }) {
         <b style={{ color: pnlColor }}> {money(trade.net_pnl)}</b> on {money(trade.margin)} blocked
         {" "}(<b style={{ color: pnlColor }}>{(trade.net_pnl / trade.margin * 100).toFixed(1)}%</b> on margin for the cycle).
       </>)}
+      {(() => {
+        const diagnosis = diagnoseTrade(trade);
+        return (
+          <div style={{ marginTop: 10, padding: "10px 14px", borderLeft: `3px solid ${diagnosis.tone}`, background: "var(--surface-2)", borderRadius: "0 8px 8px 0" }}>
+            <div style={{ color: diagnosis.tone, fontFamily: "var(--font-mono)", fontSize: 11, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 4 }}>{diagnosis.title}</div>
+            <div style={{ color: "var(--ink-2)", fontSize: 13 }}>{diagnosis.text}</div>
+          </div>
+        );
+      })()}
     </div>
   );
 }
@@ -416,6 +510,16 @@ function OptionsView() {
   const findings = OPTIONS_FINDINGS;
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "var(--gap)", padding: "0 var(--gap) var(--gap)" }}>
+      <SectionHeader number="01" title="The idea"
+        sub="The strategy from the shared notes, in plain words." />
+      <IdeaCard />
+
+      <SectionHeader number="02" title="What we did"
+        sub="How the idea was put on trial — honestly, with real data and real costs." />
+      <WhatWeDidCard />
+
+      <SectionHeader number="03" title="What 43 months of data said"
+        sub="The verdict, the numbers behind it, and the doc's key rules put to the test." />
       <VerdictBanner />
       <StatRow />
       <CriteriaCard />
@@ -432,9 +536,15 @@ function OptionsView() {
         rows={findings.stops.rows}
         why={findings.stops.why} />
       <AttributionCard />
+
+      <SectionHeader number="04" title="See it yourself — pick a stock"
+        sub="Every trade the simulation took, reconstructed step by step, each with a plain-words diagnosis of why it won or lost." />
+      <StockExplorer />
+
+      <SectionHeader number="05" title="Appendix"
+        sub="Definitions, the doc audited line by line, and the fine print." />
       <GlossaryCard />
       <DocAudit />
-      <StockExplorer />
       <div className="card">
         <span className="t-eyebrow">Per-year returns (judged)</span>
         <div style={{ display: "flex", gap: 28, fontFamily: "var(--font-mono)", fontSize: 15 }}>

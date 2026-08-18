@@ -60,7 +60,12 @@ window.OPTIONS_DATA = {
     "put_delta": -0.1419,
     "call_iv": 0.3001,
     "put_iv": 0.4027,
-    "expiry": "2023-03-29"
+    "expiry": "2023-03-29",
+    "entry_call_per_share": 3.4,
+    "entry_put_per_share": 5.0,
+    "exit_call_per_share": 0.5,
+    "exit_put_per_share": 0.85,
+    "exit_spot": 531.0
    }
   ],
   "BEL": [
@@ -89,7 +94,12 @@ window.OPTIONS_DATA = {
     "put_delta": -0.1537,
     "call_iv": 0.2682,
     "put_iv": 0.3116,
-    "expiry": "2023-03-29"
+    "expiry": "2023-03-29",
+    "entry_call_per_share": 0.6,
+    "entry_put_per_share": 0.75,
+    "exit_call_per_share": 0.05,
+    "exit_put_per_share": 0.15,
+    "exit_spot": 92.1
    }
   ],
   "TATASTEEL": [
@@ -118,7 +128,12 @@ window.OPTIONS_DATA = {
     "put_delta": -0.1255,
     "call_iv": 0.3856,
     "put_iv": 0.4168,
-    "expiry": "2023-06-29"
+    "expiry": "2023-06-29",
+    "entry_call_per_share": 0.9,
+    "entry_put_per_share": 0.9,
+    "exit_call_per_share": 0.25,
+    "exit_put_per_share": 0.1,
+    "exit_spot": 109.05
    }
   ],
   "ZEEL": [
@@ -147,7 +162,12 @@ window.OPTIONS_DATA = {
     "put_delta": -0.1489,
     "call_iv": 0.4189,
     "put_iv": 0.4372,
-    "expiry": "2023-06-29"
+    "expiry": "2023-06-29",
+    "entry_call_per_share": 1.85,
+    "entry_put_per_share": 2.1,
+    "exit_call_per_share": 0.35,
+    "exit_put_per_share": 0.45,
+    "exit_spot": 179.05
    }
   ],
   "IEX": [
@@ -176,7 +196,12 @@ window.OPTIONS_DATA = {
     "put_delta": -0.1249,
     "call_iv": 0.2945,
     "put_iv": 0.3069,
-    "expiry": "2023-06-29"
+    "expiry": "2023-06-29",
+    "entry_call_per_share": 0.95,
+    "entry_put_per_share": 0.95,
+    "exit_call_per_share": 0.05,
+    "exit_put_per_share": 14.7,
+    "exit_spot": 127.95
    },
    {
     "symbol": "IEX",
@@ -203,7 +228,12 @@ window.OPTIONS_DATA = {
     "put_delta": -0.1418,
     "call_iv": 0.3158,
     "put_iv": 0.4409,
-    "expiry": "2026-03-30"
+    "expiry": "2026-03-30",
+    "entry_call_per_share": 0.81,
+    "entry_put_per_share": 1.24,
+    "exit_call_per_share": 0.08,
+    "exit_put_per_share": 0.45,
+    "exit_spot": 119.6
    }
   ],
   "CUB": [
@@ -232,7 +262,12 @@ window.OPTIONS_DATA = {
     "put_delta": -0.1431,
     "call_iv": 0.3212,
     "put_iv": 0.4322,
-    "expiry": "2023-09-28"
+    "expiry": "2023-09-28",
+    "entry_call_per_share": 0.8,
+    "entry_put_per_share": 1.15,
+    "exit_call_per_share": 0.2,
+    "exit_put_per_share": 0.05,
+    "exit_spot": 129.8
    }
   ],
   "ADANIPORTS": [
@@ -261,7 +296,12 @@ window.OPTIONS_DATA = {
     "put_delta": -0.1463,
     "call_iv": 0.3691,
     "put_iv": 0.4313,
-    "expiry": "2023-09-28"
+    "expiry": "2023-09-28",
+    "entry_call_per_share": 6.3,
+    "entry_put_per_share": 7.5,
+    "exit_call_per_share": 1.4,
+    "exit_put_per_share": 0.25,
+    "exit_spot": 827.5
    }
   ],
   "CANBK": [
@@ -290,7 +330,12 @@ window.OPTIONS_DATA = {
     "put_delta": -0.0979,
     "call_iv": 0.2673,
     "put_iv": 0.3025,
-    "expiry": "2023-09-28"
+    "expiry": "2023-09-28",
+    "entry_call_per_share": 1.75,
+    "entry_put_per_share": 1.3,
+    "exit_call_per_share": 9.5,
+    "exit_put_per_share": 0.05,
+    "exit_spot": 369.55
    },
    {
     "symbol": "CANBK",
@@ -317,7 +362,12 @@ window.OPTIONS_DATA = {
     "put_delta": -0.1485,
     "call_iv": 0.2971,
     "put_iv": 0.3301,
-    "expiry": "2024-09-26"
+    "expiry": "2024-09-26",
+    "entry_call_per_share": 0.65,
+    "entry_put_per_share": 0.8,
+    "exit_call_per_share": 0.1,
+    "exit_put_per_share": 0.1,
+    "exit_spot": 109.3
    },
    {
     "symbol": "CANBK",
@@ -344,7 +394,12 @@ window.OPTIONS_DATA = {
     "put_delta": -0.1381,
     "call_iv": 0.2942,
     "put_iv": 0.3849,
-    "expiry": "2026-06-30"
+    "expiry": "2026-06-30",
+    "entry_call_per_share": 0.8,
+    "entry_put_per_share": 1.1,
+    "exit_call_per_share": 0.1,
+    "exit_put_per_share": 0.45,
+    "exit_spot": 130.37
    }
   ],
   "MOTHERSON": [
@@ -373,7 +428,12 @@ window.OPTIONS_DATA = {
     "put_delta": -0.1514,
     "call_iv": 0.2933,
     "put_iv": 0.3815,
-    "expiry": "2023-12-28"
+    "expiry": "2023-12-28",
+    "entry_call_per_share": 0.5,
+    "entry_put_per_share": 0.8,
+    "exit_call_per_share": 0.15,
+    "exit_put_per_share": 0.05,
+    "exit_spot": 94.8
    }
   ],
   "IDEA": [
@@ -402,7 +462,12 @@ window.OPTIONS_DATA = {
     "put_delta": -0.0935,
     "call_iv": 0.7045,
     "put_iv": 0.5897,
-    "expiry": "2023-12-28"
+    "expiry": "2023-12-28",
+    "entry_call_per_share": 0.15,
+    "entry_put_per_share": 0.1,
+    "exit_call_per_share": 0.05,
+    "exit_put_per_share": 0.05,
+    "exit_spot": 13.4
    }
   ],
   "ABCAPITAL": [
@@ -431,7 +496,12 @@ window.OPTIONS_DATA = {
     "put_delta": -0.116,
     "call_iv": 0.3388,
     "put_iv": 0.3287,
-    "expiry": "2023-12-28"
+    "expiry": "2023-12-28",
+    "entry_call_per_share": 1.15,
+    "entry_put_per_share": 0.9,
+    "exit_call_per_share": 0.05,
+    "exit_put_per_share": 0.35,
+    "exit_spot": 160.45
    }
   ],
   "FEDERALBNK": [
@@ -460,7 +530,12 @@ window.OPTIONS_DATA = {
     "put_delta": -0.1398,
     "call_iv": 0.3295,
     "put_iv": 0.323,
-    "expiry": "2024-03-28"
+    "expiry": "2024-03-28",
+    "entry_call_per_share": 1.05,
+    "entry_put_per_share": 1.0,
+    "exit_call_per_share": 0.1,
+    "exit_put_per_share": 0.3,
+    "exit_spot": 150.15
    }
   ],
   "HDFCLIFE": [
@@ -489,7 +564,12 @@ window.OPTIONS_DATA = {
     "put_delta": -0.1012,
     "call_iv": 0.2928,
     "put_iv": 0.2989,
-    "expiry": "2024-03-28"
+    "expiry": "2024-03-28",
+    "entry_call_per_share": 3.6,
+    "entry_put_per_share": 2.4,
+    "exit_call_per_share": 0.85,
+    "exit_put_per_share": 0.15,
+    "exit_spot": 625.55
    }
   ],
   "PETRONET": [
@@ -518,7 +598,12 @@ window.OPTIONS_DATA = {
     "put_delta": -0.1578,
     "call_iv": 0.2629,
     "put_iv": 0.3752,
-    "expiry": "2024-09-26"
+    "expiry": "2024-09-26",
+    "entry_call_per_share": 1.8,
+    "entry_put_per_share": 3.25,
+    "exit_call_per_share": 0.05,
+    "exit_put_per_share": 6.8,
+    "exit_spot": 329.7
    }
   ],
   "GAIL": [
@@ -547,7 +632,12 @@ window.OPTIONS_DATA = {
     "put_delta": -0.1425,
     "call_iv": 0.3062,
     "put_iv": 0.4429,
-    "expiry": "2024-12-26"
+    "expiry": "2024-12-26",
+    "entry_call_per_share": 1.15,
+    "entry_put_per_share": 1.85,
+    "exit_call_per_share": 0.5,
+    "exit_put_per_share": 0.1,
+    "exit_spot": 205.2
    },
    {
     "symbol": "GAIL",
@@ -574,7 +664,12 @@ window.OPTIONS_DATA = {
     "put_delta": -0.1454,
     "call_iv": 0.2709,
     "put_iv": 0.3537,
-    "expiry": "2026-06-30"
+    "expiry": "2026-06-30",
+    "entry_call_per_share": 1.05,
+    "entry_put_per_share": 1.35,
+    "exit_call_per_share": 0.65,
+    "exit_put_per_share": 0.05,
+    "exit_spot": 173.84
    }
   ],
   "BANKBARODA": [
@@ -603,7 +698,12 @@ window.OPTIONS_DATA = {
     "put_delta": -0.1309,
     "call_iv": 0.2776,
     "put_iv": 0.3277,
-    "expiry": "2024-12-26"
+    "expiry": "2024-12-26",
+    "entry_call_per_share": 1.55,
+    "entry_put_per_share": 1.5,
+    "exit_call_per_share": 0.15,
+    "exit_put_per_share": 0.35,
+    "exit_spot": 240.6
    }
   ],
   "ONGC": [
@@ -632,7 +732,12 @@ window.OPTIONS_DATA = {
     "put_delta": -0.1324,
     "call_iv": 0.2755,
     "put_iv": 0.3208,
-    "expiry": "2024-12-26"
+    "expiry": "2024-12-26",
+    "entry_call_per_share": 1.4,
+    "entry_put_per_share": 1.55,
+    "exit_call_per_share": 0.05,
+    "exit_put_per_share": 0.45,
+    "exit_spot": 240.85
    }
   ],
   "ASHOKLEY": [
@@ -661,7 +766,12 @@ window.OPTIONS_DATA = {
     "put_delta": -0.1426,
     "call_iv": 0.3159,
     "put_iv": 0.3839,
-    "expiry": "2025-03-27"
+    "expiry": "2025-03-27",
+    "entry_call_per_share": 1.35,
+    "entry_put_per_share": 1.7,
+    "exit_call_per_share": 0.1,
+    "exit_put_per_share": 0.3,
+    "exit_spot": 207.5
    },
    {
     "symbol": "ASHOKLEY",
@@ -688,7 +798,12 @@ window.OPTIONS_DATA = {
     "put_delta": -0.1126,
     "call_iv": 0.274,
     "put_iv": 0.3043,
-    "expiry": "2025-09-30"
+    "expiry": "2025-09-30",
+    "entry_call_per_share": 0.7,
+    "entry_put_per_share": 0.65,
+    "exit_call_per_share": 4.05,
+    "exit_put_per_share": 0.05,
+    "exit_spot": 144.04
    }
   ],
   "CHAMBLFERT": [
@@ -717,7 +832,12 @@ window.OPTIONS_DATA = {
     "put_delta": -0.1392,
     "call_iv": 0.3962,
     "put_iv": 0.4772,
-    "expiry": "2025-03-27"
+    "expiry": "2025-03-27",
+    "entry_call_per_share": 4.7,
+    "entry_put_per_share": 5.2,
+    "exit_call_per_share": 17.2,
+    "exit_put_per_share": 0.05,
+    "exit_spot": 614.35
    }
   ],
   "COALINDIA": [
@@ -746,7 +866,12 @@ window.OPTIONS_DATA = {
     "put_delta": -0.1195,
     "call_iv": 0.2689,
     "put_iv": 0.3339,
-    "expiry": "2025-03-27"
+    "expiry": "2025-03-27",
+    "entry_call_per_share": 2.25,
+    "entry_put_per_share": 2.05,
+    "exit_call_per_share": 2.6,
+    "exit_put_per_share": 0.05,
+    "exit_spot": 398.3
    }
   ],
   "TATAPOWER": [
@@ -775,7 +900,12 @@ window.OPTIONS_DATA = {
     "put_delta": -0.1342,
     "call_iv": 0.2631,
     "put_iv": 0.3194,
-    "expiry": "2025-06-26"
+    "expiry": "2025-06-26",
+    "entry_call_per_share": 2.3,
+    "entry_put_per_share": 2.4,
+    "exit_call_per_share": 0.45,
+    "exit_put_per_share": 0.25,
+    "exit_spot": 393.4
    },
    {
     "symbol": "TATAPOWER",
@@ -802,7 +932,12 @@ window.OPTIONS_DATA = {
     "put_delta": -0.1083,
     "call_iv": 0.2525,
     "put_iv": 0.2681,
-    "expiry": "2026-06-30"
+    "expiry": "2026-06-30",
+    "entry_call_per_share": 2.2,
+    "entry_put_per_share": 1.8,
+    "exit_call_per_share": 0.15,
+    "exit_put_per_share": 0.95,
+    "exit_spot": 398.3
    }
   ],
   "VEDL": [
@@ -831,7 +966,12 @@ window.OPTIONS_DATA = {
     "put_delta": -0.161,
     "call_iv": 0.3124,
     "put_iv": 0.3523,
-    "expiry": "2025-06-26"
+    "expiry": "2025-06-26",
+    "entry_call_per_share": 2.75,
+    "entry_put_per_share": 3.7,
+    "exit_call_per_share": 0.45,
+    "exit_put_per_share": 0.75,
+    "exit_spot": 439.5
    }
   ],
   "WIPRO": [
@@ -860,7 +1000,12 @@ window.OPTIONS_DATA = {
     "put_delta": -0.1372,
     "call_iv": 0.2488,
     "put_iv": 0.345,
-    "expiry": "2025-06-26"
+    "expiry": "2025-06-26",
+    "entry_call_per_share": 1.25,
+    "entry_put_per_share": 1.7,
+    "exit_call_per_share": 0.5,
+    "exit_put_per_share": 0.05,
+    "exit_spot": 263.24
    },
    {
     "symbol": "WIPRO",
@@ -887,7 +1032,12 @@ window.OPTIONS_DATA = {
     "put_delta": -0.1395,
     "call_iv": 0.1966,
     "put_iv": 0.3199,
-    "expiry": "2025-09-30"
+    "expiry": "2025-09-30",
+    "entry_call_per_share": 0.75,
+    "entry_put_per_share": 1.75,
+    "exit_call_per_share": 0.3,
+    "exit_put_per_share": 0.2,
+    "exit_spot": 250.33
    }
   ],
   "YESBANK": [
@@ -916,7 +1066,12 @@ window.OPTIONS_DATA = {
     "put_delta": -0.1037,
     "call_iv": 0.3545,
     "put_iv": 0.3423,
-    "expiry": "2025-09-30"
+    "expiry": "2025-09-30",
+    "entry_call_per_share": 0.1,
+    "entry_put_per_share": 0.1,
+    "exit_call_per_share": 0.15,
+    "exit_put_per_share": 0.05,
+    "exit_spot": 21.38
    }
   ],
   "NBCC": [
@@ -945,7 +1100,12 @@ window.OPTIONS_DATA = {
     "put_delta": -0.1376,
     "call_iv": 0.3151,
     "put_iv": 0.4306,
-    "expiry": "2025-12-30"
+    "expiry": "2025-12-30",
+    "entry_call_per_share": 0.8,
+    "entry_put_per_share": 1.1,
+    "exit_call_per_share": 0.11,
+    "exit_put_per_share": 0.18,
+    "exit_spot": 113.7
    }
   ],
   "SAIL": [
@@ -974,7 +1134,12 @@ window.OPTIONS_DATA = {
     "put_delta": -0.1503,
     "call_iv": 0.3151,
     "put_iv": 0.3672,
-    "expiry": "2025-12-30"
+    "expiry": "2025-12-30",
+    "entry_call_per_share": 0.96,
+    "entry_put_per_share": 1.2,
+    "exit_call_per_share": 0.09,
+    "exit_put_per_share": 0.34,
+    "exit_spot": 130.05
    }
   ],
   "NMDC": [
@@ -1003,7 +1168,12 @@ window.OPTIONS_DATA = {
     "put_delta": -0.1169,
     "call_iv": 0.234,
     "put_iv": 0.2627,
-    "expiry": "2025-12-30"
+    "expiry": "2025-12-30",
+    "entry_call_per_share": 0.4,
+    "entry_put_per_share": 0.34,
+    "exit_call_per_share": 2.01,
+    "exit_put_per_share": 0.02,
+    "exit_spot": 81.53
    }
   ],
   "SAMMAANCAP": [
@@ -1032,7 +1202,12 @@ window.OPTIONS_DATA = {
     "put_delta": -0.1319,
     "call_iv": 0.3721,
     "put_iv": 0.4864,
-    "expiry": "2026-03-30"
+    "expiry": "2026-03-30",
+    "entry_call_per_share": 1.17,
+    "entry_put_per_share": 1.5,
+    "exit_call_per_share": 0.1,
+    "exit_put_per_share": 0.52,
+    "exit_spot": 138.5
    }
   ],
   "INDUSTOWER": [
@@ -1061,7 +1236,12 @@ window.OPTIONS_DATA = {
     "put_delta": -0.129,
     "call_iv": 0.2834,
     "put_iv": 0.3091,
-    "expiry": "2026-03-30"
+    "expiry": "2026-03-30",
+    "entry_call_per_share": 2.85,
+    "entry_put_per_share": 2.75,
+    "exit_call_per_share": 0.1,
+    "exit_put_per_share": 3.4,
+    "exit_spot": 429.3
    }
   ]
  }

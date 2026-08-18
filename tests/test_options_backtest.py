@@ -150,3 +150,11 @@ def test_trade_log_carries_entry_context(tmp_path):
     assert trade["call_delta"] is not None and trade["put_delta"] is not None
     assert trade["call_iv"] is not None
     assert trade["rsi_at_entry"] is None  # _NoCloses store -> no RSI
+
+
+def test_trade_log_carries_per_leg_and_exit_spot(tmp_path):
+    result = _run(tmp_path)
+    jumpy_trade = next(t for t in result["trades"] if t["symbol"] == "JUMPY")
+    assert jumpy_trade["entry_call_per_share"] == 5.0
+    assert jumpy_trade["exit_call_per_share"] == 110.0
+    assert jumpy_trade["exit_spot"] == 1200.0  # spot at the stop-out mark

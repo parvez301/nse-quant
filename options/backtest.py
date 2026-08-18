@@ -107,6 +107,7 @@ class StranglePosition:
         self.current_call = self.call_row["settle"]
         self.current_put = self.put_row["settle"]
         self.breached = False
+        self.last_spot: float | None = entry_spot
 
     def mark(self, symbol_day_rows: list[dict]) -> None:
         for row in symbol_day_rows:
@@ -117,9 +118,11 @@ class StranglePosition:
                     and row["strike"] == self.put_row["strike"] and row["settle"]):
                 self.current_put = row["settle"]
         spot_now = spot_for_symbol(symbol_day_rows)
-        if spot_now and (spot_now >= self.call_row["strike"]
-                         or spot_now <= self.put_row["strike"]):
-            self.breached = True
+        if spot_now:
+            self.last_spot = spot_now
+            if (spot_now >= self.call_row["strike"]
+                    or spot_now <= self.put_row["strike"]):
+                self.breached = True
 
     @property
     def combined_premium_per_share(self) -> float:
@@ -157,6 +160,11 @@ class StranglePosition:
             "call_delta": self.call_delta, "put_delta": self.put_delta,
             "call_iv": self.call_iv, "put_iv": self.put_iv,
             "expiry": self.call_row["expiry"],
+            "entry_call_per_share": self.call_row["settle"],
+            "entry_put_per_share": self.put_row["settle"],
+            "exit_call_per_share": self.current_call,
+            "exit_put_per_share": self.current_put,
+            "exit_spot": self.last_spot,
         }
 
 
