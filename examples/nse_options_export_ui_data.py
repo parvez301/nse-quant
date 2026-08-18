@@ -138,7 +138,38 @@ def main() -> int:
                    for key, value in trade.items()}
         top20_trades_by_symbol.setdefault(trade["symbol"], []).append(rounded)
 
+    # ── The union cross-test: top-20 ∪ his 13 (26 large caps) ──────
+    # The "cleanest possible version": strictly large-cap, macro blackouts
+    # and earnings months excluded (as everywhere). Two modes as usual.
+    union_universe = top20_universe | sheet_universe
+    union_rules = run_backtest(archive_root, close_store, JUDGED_START, JUDGED_END,
+                               stop_key="none", use_earnings_filter=True,
+                               capital=JUDGE_CAPITAL,
+                               blackouts_path=REPO_ROOT / "data" / "options_blackouts.yaml",
+                               universe=union_universe)
+    union_forced = run_backtest(archive_root, close_store, JUDGED_START, JUDGED_END,
+                                stop_key="none", use_earnings_filter=True,
+                                capital=6_000_000.0,
+                                blackouts_path=REPO_ROOT / "data" / "options_blackouts.yaml",
+                                universe=union_universe, score_floor=0.0,
+                                max_positions=len(union_universe))
+    union_trades_by_symbol: dict[str, list[dict]] = {}
+    for trade in sorted(union_forced["trades"], key=lambda t: t["entry_date"]):
+        rounded = {key: (round(value, 4) if isinstance(value, float) else value)
+                   for key, value in trade.items()}
+        union_trades_by_symbol.setdefault(trade["symbol"], []).append(rounded)
+
     payload = {
+        "union_study": {
+            "n_symbols": len(union_universe),
+            "rules_stats": {key: (round(value, 4) if isinstance(value, float) else value)
+                            for key, value in summary_stats(union_rules).items()},
+            "forced_stats": {key: (round(value, 4) if isinstance(value, float) else value)
+                             for key, value in summary_stats(union_forced).items()},
+            "per_symbol_net": {symbol: round(sum(t["net_pnl"] for t in trades))
+                               for symbol, trades in sorted(union_trades_by_symbol.items())},
+            "trades_by_symbol": union_trades_by_symbol,
+        },
         "top20_study": {
             "stats": {key: (round(value, 4) if isinstance(value, float) else value)
                       for key, value in summary_stats(top20_forced).items()},
