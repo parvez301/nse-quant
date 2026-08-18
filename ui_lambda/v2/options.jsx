@@ -543,7 +543,7 @@ function LiveCleanCard() {
     <div className="card" style={{ borderColor: "var(--line-strong)" }}>
       <div style={{ display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: 8 }}>
         <span className="t-eyebrow">
-          <span style={{ color: "var(--accent)" }}>● live</span> · the clean-26 tracker — trailing 24 months, recomputed every 4 hours
+          <span style={{ color: "var(--accent)" }}>● live</span> · the clean-26 tracker — trailing 24 months, recomputed nightly (21:30 IST)
         </span>
         <span style={{ fontFamily: "var(--font-mono)", fontSize: 11, color: "var(--faint)" }}>
           updated {tracker.generated_at_utc} · data through {tracker.last_archive_day}
@@ -600,7 +600,7 @@ function LiveCleanCard() {
         </div>
       </div>
       <p style={{ color: "var(--faint)", fontSize: 11, marginTop: 12 }}>
-        NSE publishes options settle data once each evening — the tracker recomputes every 4 hours and moves when a new trading day lands.
+        NSE publishes options settle data once each evening — the tracker recomputes nightly at 21:30 IST, after that file lands.
       </p>
     </div>
   );

@@ -186,12 +186,14 @@ class NseQuantStack(Stack):
             )
         )
 
-        # Every 4 hours — clean-26 options tracker (user-requested cadence;
-        # NSE data changes once daily, intra-day runs refresh the timestamp).
+        # 16:00 UTC Mon-Fri = 21:30 IST — clean-26 options tracker, nightly
+        # after NSE publishes the F&O bhavcopy (~18-20 IST). Intra-day runs
+        # would recompute identical numbers; the incremental fetch self-heals
+        # late publications the next evening.
         optionsTrackerRule = events.Rule(
             self,
             "OptionsTrackerCron",
-            schedule=events.Schedule.rate(Duration.hours(4)),
+            schedule=events.Schedule.cron(minute="0", hour="16", week_day="MON-FRI"),
         )
         optionsTrackerRule.add_target(
             events_targets.EcsTask(
