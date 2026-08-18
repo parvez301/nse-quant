@@ -119,7 +119,31 @@ def main() -> int:
             "sim_net_pnl": round(sum(t["net_pnl"] for t in symbol_trades)),
         })
 
+    # ── The 20 largest F&O names, every tradeable month ─────────────
+    # Same forced protocol as the sheet study, so SBIN/ICICIBANK/TCS etc.
+    # are all browsable in the explorer with full walkthroughs.
+    top20_universe = {"RELIANCE", "HDFCBANK", "TCS", "BHARTIARTL", "ICICIBANK",
+                      "SBIN", "INFY", "HINDUNILVR", "ITC", "LT", "BAJFINANCE",
+                      "MARUTI", "HCLTECH", "SUNPHARMA", "KOTAKBANK", "AXISBANK",
+                      "ULTRACEMCO", "NTPC", "TITAN", "TATAMOTORS"}
+    top20_forced = run_backtest(archive_root, close_store, JUDGED_START, JUDGED_END,
+                                stop_key="none", use_earnings_filter=True,
+                                capital=5_000_000.0,
+                                blackouts_path=REPO_ROOT / "data" / "options_blackouts.yaml",
+                                universe=top20_universe, score_floor=0.0,
+                                max_positions=len(top20_universe))
+    top20_trades_by_symbol: dict[str, list[dict]] = {}
+    for trade in sorted(top20_forced["trades"], key=lambda t: t["entry_date"]):
+        rounded = {key: (round(value, 4) if isinstance(value, float) else value)
+                   for key, value in trade.items()}
+        top20_trades_by_symbol.setdefault(trade["symbol"], []).append(rounded)
+
     payload = {
+        "top20_study": {
+            "stats": {key: (round(value, 4) if isinstance(value, float) else value)
+                      for key, value in summary_stats(top20_forced).items()},
+            "trades_by_symbol": top20_trades_by_symbol,
+        },
         "sheet_study": {
             "rules_stats": {key: (round(value, 4) if isinstance(value, float) else value)
                             for key, value in summary_stats(sheet_rules).items()},

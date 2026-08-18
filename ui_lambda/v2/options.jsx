@@ -590,8 +590,9 @@ function StockExplorer() {
   const data = window.OPTIONS_DATA;
   const [dataset, setDataset] = React.useState("portfolio");
   const tradesBySymbol = !data ? {} :
-    (dataset === "sheet" && data.sheet_study
-      ? data.sheet_study.trades_by_symbol : data.trades_by_symbol);
+    (dataset === "sheet" && data.sheet_study ? data.sheet_study.trades_by_symbol
+      : dataset === "top20" && data.top20_study ? data.top20_study.trades_by_symbol
+      : data.trades_by_symbol);
   const symbols = Object.keys(tradesBySymbol).sort();
   const [selectedSymbol, setSelectedSymbol] = React.useState(symbols[0] || "");
   if (!data) return null;
@@ -614,6 +615,7 @@ function StockExplorer() {
       <div style={{ display: "flex", gap: 8, marginBottom: 12, flexWrap: "wrap" }}>
         {datasetButton("portfolio", "The judged portfolio run (his full rules)")}
         {data.sheet_study && datasetButton("sheet", "His 13 spreadsheet stocks (every tradeable month)")}
+        {data.top20_study && datasetButton("top20", "The 20 largest stocks — SBI, TCS, ICICI... (every tradeable month)")}
       </div>
       <div style={{ display: "flex", gap: 14, alignItems: "center", flexWrap: "wrap", marginBottom: 14 }}>
         <select value={activeSymbol} onChange={e => setSelectedSymbol(e.target.value)}
