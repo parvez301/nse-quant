@@ -228,6 +228,10 @@ function StockExplorer({ tracker }) {
   return (
     <div className="card" style={{ background: "var(--surface)" }}>
       <span className="t-eyebrow">Pick any of the 26 — every trade, step by step</span>
+      <p style={{ color: "var(--muted)", fontSize: 12, margin: "6px 0 0" }}>
+        Study view: each stock simulated independently in every clean month, so all 26 have a browsable history.
+        (The ₹10L portfolio above can only hold ~6 positions at a time — its trades are a subset of these.)
+      </p>
       <div style={{ display: "flex", gap: 14, alignItems: "center", flexWrap: "wrap", margin: "10px 0 14px" }}>
         <select value={selectedSymbol} onChange={e => setSelectedSymbol(e.target.value)}
                 style={{ background: "var(--surface-2)", color: "var(--ink)", border: "1px solid var(--line-strong)", borderRadius: 8, padding: "8px 12px", fontFamily: "var(--font-mono)", fontSize: 14 }}>

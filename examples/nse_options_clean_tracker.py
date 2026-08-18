@@ -66,10 +66,16 @@ def main() -> int:
                   universe=set(UNION26), capital=CAPITAL)
     rules_result = run_backtest(**common)
     fill_result = run_backtest(score_floor=0.0, max_positions=len(UNION26), **common)
+    # Study view for the explorer: every stock, every clean month,
+    # independently — capital raised so the shared margin cap never blocks
+    # an entry. NOT the ₹10L portfolio; labeled as such on the dashboard.
+    study_common = dict(common, capital=6_000_000.0)
+    study_result = run_backtest(score_floor=0.0, max_positions=len(UNION26),
+                                **study_common)
 
     per_stock = []
     fill_by_symbol: dict[str, list[dict]] = {}
-    for trade in sorted(fill_result["trades"], key=lambda t: t["entry_date"]):
+    for trade in sorted(study_result["trades"], key=lambda t: t["entry_date"]):
         rounded_trade = {key: (round(value, 4) if isinstance(value, float) else value)
                          for key, value in trade.items()}
         fill_by_symbol.setdefault(trade["symbol"], []).append(rounded_trade)
