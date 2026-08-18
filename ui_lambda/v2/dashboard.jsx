@@ -14,10 +14,19 @@ const fmtRsBig = (n) => n == null ? "—" : Number(n).toLocaleString("en-IN", { 
 function Spark({ rows, height = 180 }) {
   if (!rows || rows.length === 0) return null;
   const eq = rows.map(r => +r.total_equity);
-  const ni = rows.map(r => +r.nifty50_close);
-  const eq0 = eq[0], ni0 = ni[0];
+  // NIFTY closes can be blank on yfinance-outage days; treating "" as 0
+  // would crash the line to zero. Carry the last valid close forward.
+  const ni = [];
+  let lastValidNifty = null;
+  for (const row of rows) {
+    const value = parseFloat(row.nifty50_close);
+    if (Number.isFinite(value) && value > 0) lastValidNifty = value;
+    ni.push(lastValidNifty);
+  }
+  const firstValidNifty = ni.find(v => v != null);
+  const eq0 = eq[0], ni0 = firstValidNifty;
   const eqN = eq.map(v => v / eq0);
-  const niN = ni.map(v => v / ni0);
+  const niN = ni.map(v => (v == null ? 1 : v / ni0));
   const all = [...eqN, ...niN, 1];
   const min = Math.min(...all), max = Math.max(...all);
   const pad = (max - min) * 0.12 || 0.005;
@@ -111,8 +120,14 @@ function Hero({ equity }) {
   const totalRet = +last.total_equity / +first.total_equity - 1;
   const dailyRet = equity.length > 1 ? +last.total_equity / +equity[equity.length - 2].total_equity - 1 : 0;
   const dd = +last.total_equity / peak - 1;
-  const niftyRet = +last.nifty50_close / +first.nifty50_close - 1;
-  const alpha = totalRet - niftyRet;
+  // Blank nifty50_close (yfinance-outage days) must not read as 0 — that
+  // yields a -100% "NIFTY return" and a fantasy alpha. Compare the first
+  // and last rows that actually carry a close.
+  const niftyCloses = equity.map(r => parseFloat(r.nifty50_close))
+                            .filter(v => Number.isFinite(v) && v > 0);
+  const niftyRet = niftyCloses.length >= 2
+    ? niftyCloses[niftyCloses.length - 1] / niftyCloses[0] - 1 : null;
+  const alpha = niftyRet == null ? null : totalRet - niftyRet;
   const earlyDays = equity.length < 60;
 
   return (
