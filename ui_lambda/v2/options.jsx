@@ -387,9 +387,14 @@ function SheetStudyCard() {
       <span className="t-eyebrow">The follow-up spreadsheet — his 13 large caps, checked with real option prices</span>
       <p style={{ color: "var(--ink-2)", fontSize: 14, maxWidth: 820 }}>
         A shared workbook argues the strategy wins because 13 hand-picked large caps stayed inside ±12% of
-        month-open in <b style={{ color: "var(--ink)" }}>74.2%</b> of the last 79 months. We agree — and went one step further:
-        we sold an actual strangle on <i>every one</i> of those 13 stocks, <i>every</i> tradeable month of the judged window,
-        with real premiums and real costs ({study.forced_stats.n_trades} trades).
+        month-open in <b style={{ color: "var(--ink)" }}>74.2%</b> of the last 79 months (Jan 2019 – Jul 2025). We verified it:
+        recomputing all 1,013 monthly rows from the workbook's own OHLC data reproduces its Win/Loose labels
+        1,010 times out of 1,013 — the arithmetic is sound. Two things it doesn't show, though. First, the sheet
+        grades a <b style={{ color: "var(--ink)" }}>±12%</b> fence while the strategy sells <b style={{ color: "var(--ink)" }}>±10%</b> —
+        at the strategy's actual fence, its own data gives <b style={{ color: "var(--warn)" }}>62.9%</b> calm months, not 74.2%
+        (a failure every ~2.7 months, not every 4). Second — the bigger one — it has no column for money. So we
+        sold an actual strangle on <i>every one</i> of those 13 stocks, <i>every</i> tradeable month of the judged window,
+        with real premiums and real costs ({study.forced_stats.n_trades} trades):
       </p>
       <div style={{ display: "flex", gap: 28, flexWrap: "wrap", margin: "10px 0 14px" }}>
         {[["Win rate", `${(study.forced_stats.win_rate * 100).toFixed(1)}%`, "var(--buy)", "even higher than his sheet claims"],
