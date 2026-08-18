@@ -69,8 +69,10 @@ def main() -> int:
 
     per_stock = []
     fill_by_symbol: dict[str, list[dict]] = {}
-    for trade in fill_result["trades"]:
-        fill_by_symbol.setdefault(trade["symbol"], []).append(trade)
+    for trade in sorted(fill_result["trades"], key=lambda t: t["entry_date"]):
+        rounded_trade = {key: (round(value, 4) if isinstance(value, float) else value)
+                         for key, value in trade.items()}
+        fill_by_symbol.setdefault(trade["symbol"], []).append(rounded_trade)
     for symbol in UNION26:
         trades = fill_by_symbol.get(symbol, [])
         wins = [t for t in trades if t["net_pnl"] > 0]
@@ -111,6 +113,7 @@ def main() -> int:
         "rules_final_equity": round(rules_result["equity_curve"][-1][1])
                               if rules_result["equity_curve"] else CAPITAL,
         "per_stock": per_stock,
+        "trades_by_symbol": fill_by_symbol,
         "last_archive_day": trading_days[-1],
     }
     out_path = REPO_ROOT / "outputs" / "options" / "clean_tracker.json"
