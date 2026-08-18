@@ -140,3 +140,13 @@ def test_universe_restriction_excludes_other_symbols(tmp_path):
                           expiry_dates=EXPIRIES, score_floor=0.0,
                           universe={"FLAT"})
     assert {t["symbol"] for t in result["trades"]} == {"FLAT"}
+
+
+def test_trade_log_carries_entry_context(tmp_path):
+    result = _run(tmp_path)
+    trade = next(t for t in result["trades"] if t["symbol"] == "FLAT")
+    assert trade["entry_spot"] == 1000.0
+    assert trade["expiry"] == "2024-08-29"
+    assert trade["call_delta"] is not None and trade["put_delta"] is not None
+    assert trade["call_iv"] is not None
+    assert trade["rsi_at_entry"] is None  # _NoCloses store -> no RSI

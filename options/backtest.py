@@ -86,11 +86,18 @@ def build_cycles(expiry_dates: list[str], trading_days: list[str]) -> list[dict]
 
 class StranglePosition:
     def __init__(self, symbol: str, strangle: dict, lot_size: int, margin: float,
-                 score: float, grade: str, entry_date: str, entry_costs: float):
+                 score: float, grade: str, entry_date: str, entry_costs: float,
+                 entry_spot: float | None = None, rsi_at_entry: float | None = None):
         self.symbol = symbol
         self.call_row = strangle["call_row"]
         self.put_row = strangle["put_row"]
         self.entry_premium_per_share = strangle["entry_premium_per_share"]
+        self.call_delta = strangle.get("call_delta")
+        self.put_delta = strangle.get("put_delta")
+        self.call_iv = strangle.get("call_iv")
+        self.put_iv = strangle.get("put_iv")
+        self.entry_spot = entry_spot
+        self.rsi_at_entry = rsi_at_entry
         self.lot_size = lot_size
         self.margin = margin
         self.score = score
@@ -146,6 +153,10 @@ class StranglePosition:
             "entry_costs": self.entry_costs, "exit_costs": exit_costs,
             "gross_pnl": gross_pnl, "net_pnl": gross_pnl - self.entry_costs - exit_costs,
             "score": self.score, "grade": self.grade, "breached": self.breached,
+            "entry_spot": self.entry_spot, "rsi_at_entry": self.rsi_at_entry,
+            "call_delta": self.call_delta, "put_delta": self.put_delta,
+            "call_iv": self.call_iv, "put_iv": self.put_iv,
+            "expiry": self.call_row["expiry"],
         }
 
 
@@ -230,7 +241,8 @@ def run_cycle(cycle: dict, archive_root: pathlib.Path, close_store,
         positions.append(StranglePosition(
             candidate["symbol"], strangle, candidate["lot_size"],
             candidate["margin"], candidate["score"], candidate["grade"],
-            cycle["entry_date"], entry_costs))
+            cycle["entry_date"], entry_costs,
+            entry_spot=candidate["spot"], rsi_at_entry=candidate["rsi"]))
         margin_used += candidate["margin"]
 
     trades: list[dict] = []
