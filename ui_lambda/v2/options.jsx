@@ -62,7 +62,7 @@ function ExcludedCard({ tracker }) {
         <b style={{ color: "var(--ink)" }}>{cycles.macro + cycles.earnings} of {cycles.total} monthly cycles</b> —
         the simulation traded in <b style={{ color: "var(--accent)" }}>{cycles.clean}</b>.
       </p>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: 24 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 320px), 1fr))", gap: 24 }}>
         <div>
           <div className="t-eyebrow" style={{ marginBottom: 8 }}>Macro events excluded ({cycles.macro} cycles)</div>
           {windowEvents.map(event => (
@@ -97,7 +97,7 @@ function ResultsStrip({ tracker }) {
      `${tracker.fill_stats.n_trades} trades · ${((tracker.fill_stats.win_rate || 0) * 100).toFixed(0)}% ended in profit`],
   ];
   return (
-    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: "var(--gap)" }}>
+    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 260px), 1fr))", gap: "var(--gap)" }}>
       {tiles.map(([label, equity, note]) => (
         <div className="card" key={label} style={{ padding: 18 }}>
           <span className="t-eyebrow">{label}</span>
@@ -164,7 +164,7 @@ function TradeWalkthrough({ trade, index }) {
   const money = (value) => `₹${Math.round(value).toLocaleString("en-IN")}`;
   const diagnosis = diagnoseTrade(trade);
   const step = (label, body) => (
-    <div style={{ display: "grid", gridTemplateColumns: "110px 1fr", gap: 12, padding: "8px 0", borderTop: "1px solid var(--line)" }}>
+    <div className="walk-step">
       <span className="t-eyebrow" style={{ paddingTop: 2 }}>{label}</span>
       <div style={{ fontSize: 13, color: "var(--ink-2)" }}>{body}</div>
     </div>
@@ -308,9 +308,36 @@ function StockExplorer({ tracker }) {
   );
 }
 
+function useIsPhone() {
+  if (window.location.search.includes("phone=1")) return true;
+  const query = "(max-width: 600px)";
+  const [isPhone, setIsPhone] = React.useState(() => window.matchMedia(query).matches);
+  React.useEffect(() => {
+    const mql = window.matchMedia(query);
+    const onChange = (event) => setIsPhone(event.matches);
+    mql.addEventListener("change", onChange);
+    return () => mql.removeEventListener("change", onChange);
+  }, []);
+  return isPhone;
+}
+
+function CollapsedSection({ number, title, children }) {
+  return (
+    <details className="opt-fold">
+      <summary>
+        <span style={{ fontFamily: "var(--font-mono)", fontSize: 12, color: "var(--accent)", marginRight: 10 }}>{number}</span>
+        <span className="t-display" style={{ fontSize: 19 }}>{title}</span>
+        <span className="chev" aria-hidden="true">▶</span>
+      </summary>
+      <div style={{ paddingTop: 10 }}>{children}</div>
+    </details>
+  );
+}
+
 function OptionsView() {
   const [tracker, setTracker] = React.useState(null);
   const [failed, setFailed] = React.useState(false);
+  const isPhone = useIsPhone();
   React.useEffect(() => {
     fetch("/api/options/clean-tracker").then(r => r.json())
       .then(payload => (payload && payload.generated_at_utc) ? setTracker(payload) : setFailed(true))
@@ -318,6 +345,21 @@ function OptionsView() {
   }, []);
   if (failed) return <div style={{ padding: 40, color: "var(--warn)", fontFamily: "var(--font-mono)" }}>Tracker data unavailable — next nightly run will restore it.</div>;
   if (!tracker) return <div style={{ padding: 40, color: "var(--muted)", fontFamily: "var(--font-mono)" }}>Loading study…</div>;
+
+  if (isPhone) {
+    // Phones lead with the numbers and the field; the story folds below.
+    return (
+      <div style={{ display: "flex", flexDirection: "column", gap: "var(--gap)", padding: "0 var(--gap) var(--gap)" }}>
+        <SectionHeader number="—" title="The 26 stocks"
+          sub="₹10 lakh, 24 months, cleanest conditions. Tap a row for its trades." />
+        <ResultsStrip tracker={tracker} />
+        <StockExplorer tracker={tracker} />
+        <CollapsedSection number="01" title="What we wanted"><WantedCard /></CollapsedSection>
+        <CollapsedSection number="02" title="What we did"><DidCard /></CollapsedSection>
+        <CollapsedSection number="03" title="What we excluded — last 24 months"><ExcludedCard tracker={tracker} /></CollapsedSection>
+      </div>
+    );
+  }
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "var(--gap)", padding: "0 var(--gap) var(--gap)" }}>
       <div className="idea-method-grid">
