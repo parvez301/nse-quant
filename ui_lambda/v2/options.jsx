@@ -382,6 +382,72 @@ function CollapsedSection({ number, title, children }) {
   );
 }
 
+/* ── "What if I only trade the green ones?" — the winners trap ──── */
+function WinnersTrapCard() {
+  const rewindRows = [
+    ["BAJFINANCE", "+₹15,889", "−₹90,096", "became the worst stock of the study"],
+    ["HCLTECH", "+₹9,883", "+₹12,196", "the only one that stayed calm"],
+    ["INFY", "+₹9,879", "+₹243", "one gap ate a year of rent"],
+    ["AXISBANK", "+₹8,723", "−₹66,289", "two gaps — one was a RALLY"],
+  ];
+  return (
+    <div className="card">
+      <span className="t-eyebrow">The obvious next idea — "just keep the green ones" — tested</span>
+      <p style={{ color: "var(--ink-2)", fontSize: 14, maxWidth: 840, margin: "8px 0 4px" }}>
+        Looking at the chart above, everyone has the same thought: <i>drop the red stocks, sell options only
+        on the winners.</i> Before acting on it, ask why those stocks are green. Not because they're a special
+        kind of company — because <b style={{ color: "var(--ink)" }}>no big move happened to them in these
+        particular months</b>. Rent has a ceiling (~₹3,000/month per stock) and gaps have no floor, so with a
+        ~21% chance of a fence break per trade, plain dice predict ~5 of 26 stocks will finish green by luck
+        alone. The green rows are the lottery's survivor list, not a strategy.
+      </p>
+      <p style={{ color: "var(--ink-2)", fontSize: 14, maxWidth: 840, margin: "8px 0 10px" }}>
+        <b style={{ color: "var(--ink)" }}>We tested the idea anyway — by rewinding the tape.</b> Stand at
+        July 2025, halfway through this study, see only the first year's ranking, and pick the four winners
+        so far (by this exact rule). Then watch their <i>actual</i> next twelve months — months that are
+        already in our data:
+      </p>
+      <div style={{ overflowX: "auto" }}>
+        <table style={{ borderCollapse: "collapse", fontSize: 13, fontFamily: "var(--font-mono)", minWidth: 480 }}>
+          <thead><tr>
+            {["Your pick (July 2025)", "First year", "Their NEXT year", ""].map(header => (
+              <th key={header} style={{ textAlign: "left", padding: "6px 18px 6px 0", color: "var(--muted)", fontWeight: 400, fontSize: 11, letterSpacing: "0.08em", textTransform: "uppercase" }}>{header}</th>
+            ))}
+          </tr></thead>
+          <tbody>
+            {rewindRows.map(([symbol, before, after, note]) => (
+              <tr key={symbol} style={{ borderTop: "1px solid var(--line)" }}>
+                <td style={{ padding: "7px 18px 7px 0", color: "var(--ink-2)" }}>{symbol}</td>
+                <td style={{ padding: "7px 18px 7px 0", color: "var(--buy)" }}>{before}</td>
+                <td style={{ padding: "7px 18px 7px 0", color: after.startsWith("−") ? "var(--sell)" : "var(--buy)" }}>{after}</td>
+                <td style={{ padding: "7px 0", color: "var(--faint)", fontFamily: "var(--font-sans)", fontSize: 12 }}>{note}</td>
+              </tr>
+            ))}
+            <tr style={{ borderTop: "1px solid var(--line-strong)" }}>
+              <td style={{ padding: "7px 18px 7px 0", color: "var(--ink)" }}>"the safe green ones"</td>
+              <td style={{ padding: "7px 18px 7px 0", color: "var(--buy)" }}>+₹44,374</td>
+              <td style={{ padding: "7px 18px 7px 0", color: "var(--sell)", fontWeight: 600 }}>−₹1,43,946</td>
+              <td />
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <p style={{ color: "var(--ink-2)", fontSize: 14, maxWidth: 840, margin: "12px 0 0" }}>
+        The #1 pick — calmest history, highest setup scores (78/100, grade A on the day it entered) — became
+        the worst stock of the entire study. And the half-time <i>losers</i> lost another ₹72k too: there is
+        no safe subset, only whichever stock's gap arrives next. Even with a time machine — knowing today's
+        final top-4 in advance — trading only them earns +₹67,711 over two years on ~₹4 lakh of margin:
+        about <b style={{ color: "var(--ink)" }}>8.5% a year, versus 7% in a fixed deposit</b>, as the prize
+        for literally predicting the future.
+      </p>
+      <p style={{ color: "var(--warn)", fontSize: 13, marginTop: 10 }}>
+        In one line: green means "hasn't exploded yet" — and the market already prices that calm into thinner
+        fees. Picking past winners buys smaller rent with the same size truck.
+      </p>
+    </div>
+  );
+}
+
 function OptionsView() {
   const [tracker, setTracker] = React.useState(null);
   const [failed, setFailed] = React.useState(false);
@@ -402,6 +468,7 @@ function OptionsView() {
           sub="₹10 lakh, 24 months, cleanest conditions. Tap a row for its trades." />
         <ResultsStrip tracker={tracker} />
         <StockExplorer tracker={tracker} />
+        <WinnersTrapCard />
         <CollapsedSection number="01" title="What we wanted"><WantedCard /></CollapsedSection>
         <CollapsedSection number="02" title="What we did"><DidCard /></CollapsedSection>
         <CollapsedSection number="03" title="What we excluded — last 24 months"><ExcludedCard tracker={tracker} /></CollapsedSection>
@@ -431,6 +498,7 @@ function OptionsView() {
         sub="Where ₹10 lakh stands, and every simulated trade in detail." />
       <ResultsStrip tracker={tracker} />
       <StockExplorer tracker={tracker} />
+      <WinnersTrapCard />
     </div>
   );
 }
