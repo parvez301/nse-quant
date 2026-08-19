@@ -157,8 +157,8 @@ function diagnoseTrade(trade) {
     text: moveText + "The stock never crossed the fence — but it drifted close enough (or volatility rose enough) that the promises got MORE expensive instead of decaying. The square-off arrived with buy-back prices above what was collected. You can lose without the fence breaking; premiums move on fear, not just price." };
 }
 
-function TradeWalkthrough({ trade, index }) {
-  const [isOpen, setIsOpen] = React.useState(index === 0);
+function TradeWalkthrough({ trade, index, forceOpen }) {
+  const [isOpen, setIsOpen] = React.useState(forceOpen === true || index === 0);
   const distancePct = (strike) => (Math.abs(strike - trade.entry_spot) / trade.entry_spot * 100).toFixed(1);
   const pnlColor = trade.net_pnl >= 0 ? "var(--buy)" : "var(--sell)";
   const money = (value) => `₹${Math.round(value).toLocaleString("en-IN")}`;
@@ -219,6 +219,41 @@ function TradeWalkthrough({ trade, index }) {
   );
 }
 
+function ReportView({ rows }) {
+  const money = (value) => `${value < 0 ? "−" : "+"}₹${Math.abs(Math.round(value)).toLocaleString("en-IN")}`;
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+      <p style={{ color: "var(--muted)", fontSize: 13, margin: "4px 0 8px", maxWidth: 840 }}>
+        Every stock, every trade, fully expanded — ordered worst to best. The entry thinking is the same
+        checklist each time: clean month → calm RSI → strikes near 0.15 delta, ≥8% away, outside the
+        expected-move band → score /100 → sell both legs, then only the three exit rules matter.
+      </p>
+      {rows.map(row => {
+        const wins = row.trades.filter(t => t.net_pnl > 0).length;
+        const breaches = row.trades.filter(t => t.breached).length;
+        return (
+          <div key={row.symbol} style={{ marginBottom: 18 }}>
+            <div style={{ display: "flex", alignItems: "baseline", gap: 12, flexWrap: "wrap", margin: "14px 0 8px", borderBottom: "1px solid var(--line-strong)", paddingBottom: 6 }}>
+              <span className="t-display" style={{ fontSize: 22 }}>{row.symbol}</span>
+              <span style={{ fontFamily: "var(--font-mono)", fontSize: 14, color: row.net >= 0 ? "var(--buy)" : "var(--sell)" }}>{money(row.net)}</span>
+              <span style={{ fontFamily: "var(--font-mono)", fontSize: 12, color: "var(--muted)" }}>
+                {row.trades.length} trades · {wins}W/{row.trades.length - wins}L{breaches > 0 && <> · <span style={{ color: "var(--sell)" }}>fence broke {breaches}×</span></>}
+              </span>
+            </div>
+            {row.trades.length === 0 &&
+              <div style={{ color: "var(--muted)", fontSize: 13 }}>No tradeable setup passed the filters in the window.</div>}
+            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+              {row.trades.map((trade, index) => (
+                <TradeWalkthrough key={trade.entry_date + index} trade={trade} index={index} forceOpen={true} />
+              ))}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 function StockExplorer({ tracker }) {
   const tradesBySymbol = tracker.trades_by_symbol || {};
   const rows = tracker.universe.map(symbol => {
@@ -226,6 +261,7 @@ function StockExplorer({ tracker }) {
     return { symbol, trades, net: trades.reduce((sum, t) => sum + t.net_pnl, 0) };
   }).sort((a, b) => a.net - b.net);  // worst first — the losses lead the story
   const [selectedSymbol, setSelectedSymbol] = React.useState(null);
+  const [viewMode, setViewMode] = React.useState("chart");
   const maxLoss = Math.max(1, ...rows.map(r => Math.max(0, -r.net)));
   const maxGain = Math.max(1, ...rows.map(r => Math.max(0, r.net)));
   const zeroPct = maxLoss / (maxLoss + maxGain) * 100;   // shared scale, one baseline
@@ -239,13 +275,24 @@ function StockExplorer({ tracker }) {
   }, [selectedRow]);
   return (
     <div className="card" style={{ background: "var(--surface)" }}>
-      <span className="t-eyebrow">All 26 at a glance — click a row for its trades, step by step</span>
+      <div style={{ display: "flex", alignItems: "baseline", gap: 12, flexWrap: "wrap" }}>
+        <span className="t-eyebrow">All 26 at a glance — click a row for its trades, step by step</span>
+        <button onClick={() => setViewMode(viewMode === "chart" ? "report" : "chart")}
+                style={{ marginLeft: "auto", background: viewMode === "report" ? "var(--accent)" : "var(--surface-2)",
+                         color: viewMode === "report" ? "var(--accent-ink)" : "var(--ink-2)",
+                         border: "1px solid var(--line-strong)", borderRadius: "var(--radius-pill)",
+                         padding: "6px 14px", fontSize: 12, cursor: "pointer" }}>
+          {viewMode === "chart" ? "Read the full report — all 26, every trade" : "Back to the chart"}
+        </button>
+      </div>
       <p style={{ color: "var(--muted)", fontSize: 12, margin: "6px 0 12px" }}>
         Study view: each stock simulated independently in every clean month.
         (The ₹10L portfolio above holds ~6 positions at a time — its trades are a subset of these.)
         Dots are that stock's trades in order: <span style={{ color: "var(--buy)" }}>●</span> profit ·{" "}
         <span style={{ color: "var(--sell)" }}>●</span> loss · ○ ring = the ±10% fence broke.
       </p>
+      {viewMode === "report" && <ReportView rows={rows} />}
+      {viewMode === "chart" && <>
       <div role="listbox" aria-label="Stocks ranked by net P&L">
         {rows.map(row => {
           const isSelected = row.symbol === selectedSymbol;
@@ -303,6 +350,7 @@ function StockExplorer({ tracker }) {
             {selectedRow.trades.map((trade, index) => <TradeWalkthrough key={trade.entry_date + index} trade={trade} index={index} />)}
           </div>
         </aside>
+      </>}
       </>}
     </div>
   );
